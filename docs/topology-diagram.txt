@@ -1,0 +1,121 @@
+=========================================================================
+ UNIVERSITY CAMPUS NETWORK - PHYSICAL / LOGICAL TOPOLOGY
+ Project R075458  |  Cisco Packet Tracer 8.2+
+=========================================================================
+
+LEGEND
+  =====   802.1Q TRUNK link      (carries VLANs 10,20,30,40,50,60,70,80,99)
+  -----   ACCESS link            (single VLAN, end device)
+  ~~~~~   ROUTED link            (Layer-3 point-to-point)  -- NOT USED,
+                                 see note at the bottom of this file
+  [S]     Copper Straight-Through cable
+  [X]     Copper Cross-Over cable
+
+
+-------------------------------------------------------------------------
+ LAYER 1 - CORE
+-------------------------------------------------------------------------
+
+                    +------------------------------------------+
+                    |                R1-CORE                   |
+                    |          Cisco 2911 Router               |
+                    |   Router-on-a-Stick inter-VLAN gateway   |
+                    |   DHCP server  |  ACL enforcement point  |
+                    |------------------------------------------|
+                    | G0/0     (physical trunk, no IP)         |
+                    | G0/0.10  192.168.10.1  VLAN 10 ADMIN     |
+                    | G0/0.20  192.168.20.1  VLAN 20 CSE       |
+                    | G0/0.30  192.168.30.1  VLAN 30 ECE       |
+                    | G0/0.40  192.168.40.1  VLAN 40 MECH      |
+                    | G0/0.50  192.168.50.1  VLAN 50 LIBRARY   |
+                    | G0/0.60  192.168.60.1  VLAN 60 FACULTY   |
+                    | G0/0.70  192.168.70.1  VLAN 70 LAB       |
+                    | G0/0.80  192.168.80.1  VLAN 80 SERVERS   |
+                    | G0/0.99  192.168.99.1  VLAN 99 MGMT/NAT  |
+                    | G0/1, G0/2  UNUSED - shutdown            |
+                    +---------------------+--------------------+
+                                          | Gi0/0
+                                          |
+                            TRUNK [S] =====
+                                          |
+                                          | Gi0/1
+-------------------------------------------------------------------------
+ LAYER 2 - DISTRIBUTION
+-------------------------------------------------------------------------
+                    +---------------------+--------------------+
+                    |                SW-DIST                   |
+                    |         Cisco 2960-24TT Switch           |
+                    |   Spanning-tree ROOT for all VLANs       |
+                    |   Mgmt SVI VLAN 99 : 192.168.99.2/24     |
+                    |   Fa0/1-8  = 8 downlink TRUNKS           |
+                    |   Fa0/9-24, Gi0/2 = UNUSED (shutdown)    |
+                    +--+----+----+----+----+----+----+----+----+
+                       |    |    |    |    |    |    |    |
+                  Fa0/1|    |    |    |    |    |    |    |Fa0/8
+                       |Fa0/2    |Fa0/4    |Fa0/6    |
+                       |    |Fa0/3    |Fa0/5    |Fa0/7
+                       |    |    |    |    |    |    |    |
+              TRUNK [X]=    =    =    =    =    =    =    =TRUNK [X]
+                       |    |    |    |    |    |    |    |
+                  Fa0/24 on every access switch below
+-------------------------------------------------------------------------
+ LAYER 3 - ACCESS  (each switch: Fa0/24 = uplink trunk)
+-------------------------------------------------------------------------
+
+  +-------------+  +-------------+  +-------------+  +-------------+
+  |  SW-ADMIN   |  |   SW-CSE    |  |   SW-ECE    |  |  SW-MECH    |
+  |  2960-24TT  |  |  2960-24TT  |  |  2960-24TT  |  |  2960-24TT  |
+  | VLAN 10     |  | VLAN 20     |  | VLAN 30     |  | VLAN 40     |
+  | 99.11 mgmt  |  | 99.12 mgmt  |  | 99.13 mgmt  |  | 99.14 mgmt  |
+  +------+------+  +------+------+  +------+------+  +------+------+
+   Fa0/1-4 ACCESS   Fa0/1-6 ACCESS   Fa0/1-6 ACCESS   Fa0/1-4 ACCESS
+     [S] ----          [S] ----         [S] ----         [S] ----
+         |                 |                |                |
+   PC-ADM1..4        PC-CSE1..6       PC-ECE1..6       PC-MECH1..4
+   192.168.10.11+    192.168.20.11+   192.168.30.11+   192.168.40.11+
+   (DHCP)            (DHCP)           (DHCP)           (DHCP)
+
+
+  +-------------+  +-------------+  +-------------+  +---------------+
+  |   SW-LIB    |  |   SW-FAC    |  |   SW-LAB    |  |    SW-SRV     |
+  |  2960-24TT  |  |  2960-24TT  |  |  2960-24TT  |  |   2960-24TT   |
+  | VLAN 50     |  | VLAN 60     |  | VLAN 70     |  | VLAN 80       |
+  | 99.15 mgmt  |  | 99.16 mgmt  |  | 99.17 mgmt  |  | 99.18 mgmt    |
+  +------+------+  +------+------+  +------+------+  +-------+-------+
+   Fa0/1-4 ACCESS   Fa0/1-4 ACCESS   Fa0/1-8 ACCESS    Fa0/1-3 ACCESS
+     [S] ----          [S] ----         [S] ----          [S] ----
+         |                 |                |                 |
+   PC-LIB1..4        PC-FAC1..4       PC-LAB1..8        SRV-DNS   192.168.80.10
+   192.168.50.11+    192.168.60.11+   192.168.70.11+    SRV-WEB   192.168.80.20
+   (DHCP)            (DHCP)           (DHCP)            SRV-APP   192.168.80.30
+                                                        (ALL STATIC)
+
+-------------------------------------------------------------------------
+ LINK SUMMARY
+-------------------------------------------------------------------------
+  TRUNK links  :  9   (1 router-to-dist, 8 dist-to-access)
+  ACCESS links : 39   (36 PCs + 3 servers)
+  ROUTED links :  0
+  TOTAL cables : 48
+
+ WHY THERE ARE NO ROUTED LINKS
+   In a Router-on-a-Stick design the router owns every subnet on 802.1Q
+   subinterfaces of ONE physical port. No link in this topology is a
+   Layer-3 point-to-point segment, so no /30 transit networks exist and
+   no routing protocol is required. Every packet between two departments
+   travels UP the trunk to R1-CORE and back DOWN the trunk. This is the
+   classic "router-on-a-stick hairpin" and is the trade-off accepted in
+   exchange for needing only one router interface.
+
+-------------------------------------------------------------------------
+ CABLE TYPE RULE USED
+-------------------------------------------------------------------------
+   Router  <-> Switch : STRAIGHT-THROUGH  (unlike devices)
+   Switch  <-> Switch : CROSS-OVER        (like devices)
+   PC/Srv  <-> Switch : STRAIGHT-THROUGH  (unlike devices)
+
+   Packet Tracer 8.2+ 2960 switches do support Auto-MDIX, so a
+   straight-through cable between two switches will usually still come
+   up. The crossover cable is used anyway because it is the answer
+   expected in an exam and it removes all ambiguity.
+=========================================================================

@@ -1,0 +1,242 @@
+!=========================================================================
+! DEVICE  : SW-DIST
+! MODEL   : Cisco 2960-24TT (24 x FastEthernet + 2 x GigabitEthernet)
+! ROLE    : Distribution switch. Aggregates all eight departmental
+!           access switches and carries the single 802.1Q trunk to
+!           R1-CORE. Spanning-tree root bridge for every VLAN.
+! FILE    : configs/SW-DIST.txt
+! MGMT IP : 192.168.99.2 /24  (VLAN 99)
+! TESTED  : Cisco Packet Tracer 8.2 and 9.0
+!
+! PORT ROLE MAP
+!   Gi0/1        TRUNK  -> R1-CORE Gi0/0            (router-on-a-stick)
+!   Fa0/1        TRUNK  -> SW-ADMIN  Fa0/24
+!   Fa0/2        TRUNK  -> SW-CSE    Fa0/24
+!   Fa0/3        TRUNK  -> SW-ECE    Fa0/24
+!   Fa0/4        TRUNK  -> SW-MECH   Fa0/24
+!   Fa0/5        TRUNK  -> SW-LIB    Fa0/24
+!   Fa0/6        TRUNK  -> SW-FAC    Fa0/24
+!   Fa0/7        TRUNK  -> SW-LAB    Fa0/24
+!   Fa0/8        TRUNK  -> SW-SRV    Fa0/24
+!   Fa0/9-Fa0/24 UNUSED -> VLAN 999 parking + shutdown
+!   Gi0/2        UNUSED -> shutdown
+!
+! There are NO access ports and NO end devices on this switch, so port
+! security is not configured here - it belongs on the access switches.
+!=========================================================================
+
+enable
+configure terminal
+
+!------------------------------------------------------------------------
+! BLOCK 1 - IDENTITY AND GLOBAL HARDENING
+!------------------------------------------------------------------------
+hostname SW-DIST
+no ip domain-lookup
+ip domain-name university.local
+enable secret Univ@Dist#2025
+service password-encryption
+username netadmin privilege 15 secret Adm1n@Univ#2025
+banner motd $
+**********************************************************
+*   UNIVERSITY CAMPUS NETWORK  --  SW-DIST               *
+*   AUTHORISED ACCESS ONLY. All activity is logged.      *
+**********************************************************
+$
+!
+!------------------------------------------------------------------------
+! BLOCK 2 - VLAN DATABASE
+! Every VLAN that can appear on a trunk must exist locally, otherwise
+! the switch silently drops those frames.
+!------------------------------------------------------------------------
+vlan 10
+ name ADMIN
+ exit
+vlan 20
+ name CSE
+ exit
+vlan 30
+ name ECE
+ exit
+vlan 40
+ name MECH
+ exit
+vlan 50
+ name LIBRARY
+ exit
+vlan 60
+ name FACULTY
+ exit
+vlan 70
+ name LAB
+ exit
+vlan 80
+ name SERVERS
+ exit
+vlan 99
+ name MGMT
+ exit
+vlan 999
+ name PARKING-UNUSED
+ exit
+!
+! VERIFY : do show vlan brief
+
+!------------------------------------------------------------------------
+! BLOCK 3 - UPLINK TRUNK TO R1-CORE
+! 'switchport mode trunk' is hard-coded (no DTP negotiation).
+! The allowed list is pruned so only the ten designed VLANs can cross.
+! Native VLAN 99 must match the router subinterface G0/0.99.
+!------------------------------------------------------------------------
+interface GigabitEthernet0/1
+ description ### TRUNK TO R1-CORE Gi0/0 - INTER-VLAN ROUTING UPLINK ###
+ switchport mode trunk
+ switchport trunk native vlan 99
+ switchport trunk allowed vlan 10,20,30,40,50,60,70,80,99
+ no shutdown
+ exit
+!
+!------------------------------------------------------------------------
+! BLOCK 4 - DOWNLINK TRUNKS TO THE EIGHT ACCESS SWITCHES
+!------------------------------------------------------------------------
+interface range FastEthernet0/1-8
+ description ### TRUNK TO DEPARTMENT ACCESS SWITCH ###
+ switchport mode trunk
+ switchport trunk native vlan 99
+ switchport trunk allowed vlan 10,20,30,40,50,60,70,80,99
+ no shutdown
+ exit
+!
+! Per-port descriptions so the topology is readable from the CLI.
+interface FastEthernet0/1
+ description ### TRUNK -> SW-ADMIN Fa0/24 (VLAN 10) ###
+ exit
+interface FastEthernet0/2
+ description ### TRUNK -> SW-CSE Fa0/24 (VLAN 20) ###
+ exit
+interface FastEthernet0/3
+ description ### TRUNK -> SW-ECE Fa0/24 (VLAN 30) ###
+ exit
+interface FastEthernet0/4
+ description ### TRUNK -> SW-MECH Fa0/24 (VLAN 40) ###
+ exit
+interface FastEthernet0/5
+ description ### TRUNK -> SW-LIB Fa0/24 (VLAN 50) ###
+ exit
+interface FastEthernet0/6
+ description ### TRUNK -> SW-FAC Fa0/24 (VLAN 60) ###
+ exit
+interface FastEthernet0/7
+ description ### TRUNK -> SW-LAB Fa0/24 (VLAN 70) ###
+ exit
+interface FastEthernet0/8
+ description ### TRUNK -> SW-SRV Fa0/24 (VLAN 80) ###
+ exit
+!
+! VERIFY : do show interfaces trunk
+! VERIFY : do show interfaces status
+
+!------------------------------------------------------------------------
+! BLOCK 5 - SPANNING TREE
+! SW-DIST is made the root bridge for every VLAN. Priority 4096 is used
+! instead of 'root primary' because the numeric form is guaranteed to
+! parse on every Packet Tracer IOS image.
+!------------------------------------------------------------------------
+spanning-tree mode pvst
+spanning-tree vlan 10 priority 4096
+spanning-tree vlan 20 priority 4096
+spanning-tree vlan 30 priority 4096
+spanning-tree vlan 40 priority 4096
+spanning-tree vlan 50 priority 4096
+spanning-tree vlan 60 priority 4096
+spanning-tree vlan 70 priority 4096
+spanning-tree vlan 80 priority 4096
+spanning-tree vlan 99 priority 4096
+!
+! VERIFY : do show spanning-tree summary
+! VERIFY : do show spanning-tree vlan 10
+
+!------------------------------------------------------------------------
+! BLOCK 6 - UNUSED PORTS
+! Parked in a dead VLAN and administratively shut down. This is the
+! single cheapest physical-security control on a campus switch.
+!------------------------------------------------------------------------
+interface range FastEthernet0/9-24
+ description ### UNUSED - PARKED AND DISABLED ###
+ switchport mode access
+ switchport access vlan 999
+ shutdown
+ exit
+!
+interface GigabitEthernet0/2
+ description ### UNUSED - PARKED AND DISABLED ###
+ switchport mode access
+ switchport access vlan 999
+ shutdown
+ exit
+!
+! VERIFY : do show ip interface brief
+
+!------------------------------------------------------------------------
+! BLOCK 7 - MANAGEMENT SVI, SSH, CONSOLE AND VTY
+! NOTE: 'crypto key generate rsa' is INTERACTIVE. Type 1024 at the
+!       "How many bits in the modulus [512]:" prompt, then continue.
+!------------------------------------------------------------------------
+interface Vlan99
+ description ### IN-BAND MANAGEMENT INTERFACE ###
+ ip address 192.168.99.2 255.255.255.0
+ no shutdown
+ exit
+!
+access-list 10 remark === SSH / VTY MANAGEMENT SOURCES ===
+access-list 10 permit 192.168.10.0 0.0.0.255
+!
+ip default-gateway 192.168.99.1
+!
+crypto key generate rsa
+1024
+!
+ip ssh version 2
+!
+line console 0
+ password Cons@2025
+ login
+ logging synchronous
+ exec-timeout 5 0
+ exit
+!
+line vty 0 4
+ password Vty@2025
+ login local
+ transport input ssh
+ access-class 10 in
+ exec-timeout 5 0
+ exit
+!
+line vty 5 15
+ password Vty@2025
+ login local
+ transport input ssh
+ access-class 10 in
+ exec-timeout 5 0
+ exit
+!
+! VERIFY : do show ip interface brief | include Vlan99
+! VERIFY : do show ip ssh
+
+!------------------------------------------------------------------------
+! BLOCK 8 - SAVE
+!------------------------------------------------------------------------
+end
+write memory
+
+!=========================================================================
+! FULL VERIFICATION SET FOR SW-DIST
+!   show vlan brief          -> 10,20,30,40,50,60,70,80,99,999 present
+!   show interfaces trunk    -> Gi0/1 and Fa0/1-8 trunking, native 99
+!   show interfaces status   -> Fa0/9-24 and Gi0/2 "disabled"
+!   show spanning-tree vlan 10 -> "This bridge is the root"
+!   show ip interface brief  -> Vlan99 192.168.99.2 up/up
+!   show mac address-table   -> learned MACs appear per VLAN
+!   ping 192.168.99.1        -> reachability to the router
+!=========================================================================

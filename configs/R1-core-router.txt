@@ -1,0 +1,340 @@
+!=========================================================================
+! DEVICE  : R1-CORE
+! MODEL   : Cisco 2911 (ISR G2)
+! ROLE    : Core router. Router-on-a-Stick inter-VLAN gateway for
+!           VLANs 10-80 + 99, DHCP server for VLANs 10-70,
+!           ACL enforcement point, SSH management head-end.
+! FILE    : configs/R1-core-router.txt
+! TESTED  : Cisco Packet Tracer 8.2 and 9.0
+!
+! HOW TO USE
+!   1. Click R1-CORE -> CLI tab -> press Enter.
+!   2. Paste this file in ONE block, top to bottom.
+!   3. The 'crypto key generate rsa' command is INTERACTIVE. When PT
+!      prints "How many bits in the modulus [512]:" the paste stops.
+!      Type 1024, press Enter, then paste the REST of the file.
+!   4. Finish with 'write memory'.
+!
+! PASSWORD SUMMARY (lab values only - change for a real network)
+!   enable secret ....... Univ@Core#2025
+!   console ............. Cons@2025
+!   vty (fallback) ...... Vty@2025
+!   SSH local user ...... netadmin / Adm1n@Univ#2025
+!=========================================================================
+
+enable
+configure terminal
+
+!------------------------------------------------------------------------
+! BLOCK 1 - IDENTITY, DOMAIN, GLOBAL HARDENING
+!------------------------------------------------------------------------
+hostname R1-CORE
+no ip domain-lookup
+ip domain-name university.local
+enable secret Univ@Core#2025
+service password-encryption
+username netadmin privilege 15 secret Adm1n@Univ#2025
+banner motd $
+**********************************************************
+*   UNIVERSITY CAMPUS NETWORK  --  R1-CORE ROUTER        *
+*   AUTHORISED ACCESS ONLY. All activity is logged.      *
+*   Disconnect immediately if you are not authorised.    *
+**********************************************************
+$
+!
+! VERIFY : do show running-config | include hostname
+
+!------------------------------------------------------------------------
+! BLOCK 2 - PHYSICAL TRUNK INTERFACE TO SW-DIST
+! The physical interface carries NO IP address. All routing happens on
+! the 802.1Q subinterfaces created in BLOCK 3.
+!------------------------------------------------------------------------
+interface GigabitEthernet0/0
+ description ### 802.1Q TRUNK TO SW-DIST Gi0/1 - ROUTER ON A STICK ###
+ no ip address
+ duplex auto
+ speed auto
+ no shutdown
+ exit
+!
+interface GigabitEthernet0/1
+ description ### UNUSED - ADMINISTRATIVELY DOWN ###
+ no ip address
+ shutdown
+ exit
+!
+interface GigabitEthernet0/2
+ description ### UNUSED - ADMINISTRATIVELY DOWN ###
+ no ip address
+ shutdown
+ exit
+!
+! VERIFY : do show ip interface brief
+
+!------------------------------------------------------------------------
+! BLOCK 3 - INTER-VLAN ROUTING (ROUTER-ON-A-STICK SUBINTERFACES)
+! The subinterface number is deliberately made equal to the VLAN ID so
+! the configuration is self-documenting.
+! G0/0.99 uses the 'native' keyword because VLAN 99 is the native VLAN
+! on every trunk, so its frames arrive UNTAGGED.
+!------------------------------------------------------------------------
+interface GigabitEthernet0/0.10
+ description ### VLAN 10 - ADMINISTRATION - GATEWAY ###
+ encapsulation dot1Q 10
+ ip address 192.168.10.1 255.255.255.0
+ exit
+!
+interface GigabitEthernet0/0.20
+ description ### VLAN 20 - COMPUTER SCIENCE - GATEWAY ###
+ encapsulation dot1Q 20
+ ip address 192.168.20.1 255.255.255.0
+ exit
+!
+interface GigabitEthernet0/0.30
+ description ### VLAN 30 - ELECTRONICS - GATEWAY ###
+ encapsulation dot1Q 30
+ ip address 192.168.30.1 255.255.255.0
+ exit
+!
+interface GigabitEthernet0/0.40
+ description ### VLAN 40 - MECHANICAL - GATEWAY ###
+ encapsulation dot1Q 40
+ ip address 192.168.40.1 255.255.255.0
+ exit
+!
+interface GigabitEthernet0/0.50
+ description ### VLAN 50 - LIBRARY - GATEWAY ###
+ encapsulation dot1Q 50
+ ip address 192.168.50.1 255.255.255.0
+ exit
+!
+interface GigabitEthernet0/0.60
+ description ### VLAN 60 - FACULTY - GATEWAY ###
+ encapsulation dot1Q 60
+ ip address 192.168.60.1 255.255.255.0
+ exit
+!
+interface GigabitEthernet0/0.70
+ description ### VLAN 70 - STUDENT LABS - GATEWAY ###
+ encapsulation dot1Q 70
+ ip address 192.168.70.1 255.255.255.0
+ exit
+!
+interface GigabitEthernet0/0.80
+ description ### VLAN 80 - SERVER ROOM - GATEWAY ###
+ encapsulation dot1Q 80
+ ip address 192.168.80.1 255.255.255.0
+ exit
+!
+interface GigabitEthernet0/0.99
+ description ### VLAN 99 - SWITCH MANAGEMENT - NATIVE VLAN ###
+ encapsulation dot1Q 99 native
+ ip address 192.168.99.1 255.255.255.0
+ exit
+!
+! VERIFY : do show ip interface brief
+! VERIFY : do show ip route      (expect 9 x C and 9 x L routes)
+! VERIFY : do show vlans         (802.1Q subinterface statistics)
+
+!------------------------------------------------------------------------
+! BLOCK 4 - DHCP EXCLUSIONS
+! .1 to .10 of every user VLAN is reserved for gateways, printers and
+! future static devices, so DHCP clients start at .11.
+! VLAN 80 (servers) and VLAN 99 (management) get NO pool - static only.
+!------------------------------------------------------------------------
+ip dhcp excluded-address 192.168.10.1 192.168.10.10
+ip dhcp excluded-address 192.168.20.1 192.168.20.10
+ip dhcp excluded-address 192.168.30.1 192.168.30.10
+ip dhcp excluded-address 192.168.40.1 192.168.40.10
+ip dhcp excluded-address 192.168.50.1 192.168.50.10
+ip dhcp excluded-address 192.168.60.1 192.168.60.10
+ip dhcp excluded-address 192.168.70.1 192.168.70.10
+!
+!------------------------------------------------------------------------
+! BLOCK 5 - DHCP POOLS (ONE PER USER VLAN)
+!------------------------------------------------------------------------
+ip dhcp pool ADMIN_POOL
+ network 192.168.10.0 255.255.255.0
+ default-router 192.168.10.1
+ dns-server 192.168.80.10
+ domain-name university.local
+ exit
+!
+ip dhcp pool CSE_POOL
+ network 192.168.20.0 255.255.255.0
+ default-router 192.168.20.1
+ dns-server 192.168.80.10
+ domain-name university.local
+ exit
+!
+ip dhcp pool ECE_POOL
+ network 192.168.30.0 255.255.255.0
+ default-router 192.168.30.1
+ dns-server 192.168.80.10
+ domain-name university.local
+ exit
+!
+ip dhcp pool MECH_POOL
+ network 192.168.40.0 255.255.255.0
+ default-router 192.168.40.1
+ dns-server 192.168.80.10
+ domain-name university.local
+ exit
+!
+ip dhcp pool LIBRARY_POOL
+ network 192.168.50.0 255.255.255.0
+ default-router 192.168.50.1
+ dns-server 192.168.80.10
+ domain-name university.local
+ exit
+!
+ip dhcp pool FACULTY_POOL
+ network 192.168.60.0 255.255.255.0
+ default-router 192.168.60.1
+ dns-server 192.168.80.10
+ domain-name university.local
+ exit
+!
+ip dhcp pool LAB_POOL
+ network 192.168.70.0 255.255.255.0
+ default-router 192.168.70.1
+ dns-server 192.168.80.10
+ domain-name university.local
+ exit
+!
+! VERIFY : do show ip dhcp pool
+! VERIFY : do show ip dhcp binding    (after PCs are switched to DHCP)
+
+!------------------------------------------------------------------------
+! BLOCK 6 - ACCESS CONTROL LISTS
+!
+! ACL 10  (standard) - management source filter.
+!   PERMITS : any host in 192.168.10.0/24 (Administration)
+!   DENIES  : everything else (implicit deny any at the end)
+!   APPLIED : line vty 0 15, direction IN, via 'access-class 10 in'
+!
+! ACL 110 (extended) - student-lab containment.
+!   PERMITS : DHCP (udp 67/68) so LAB PCs can still obtain an address
+!             DNS to 192.168.80.10 (udp 53 and tcp 53)
+!             HTTP/HTTPS to web server .20 and portal server .30
+!             everything not explicitly denied below
+!   DENIES  : VLAN 70 -> 192.168.10.0/24 (Administration)
+!             VLAN 70 -> 192.168.60.0/24 (Faculty)
+!   APPLIED : interface GigabitEthernet0/0.70, direction IN
+!   WHY IN  : filtering closest to the source drops the packet before
+!             the router spends any effort routing it.
+!
+! ACL 120 (extended) - server-farm protection.
+!   PERMITS : full IP from Administration 192.168.10.0/24
+!             DNS to .10, HTTP/HTTPS to .20, HTTP/FTP to .30
+!             ICMP to the whole server subnet (ping tests must pass)
+!   DENIES  : every other protocol/port entering 192.168.80.0/24
+!   APPLIED : interface GigabitEthernet0/0.80, direction OUT
+!   WHY OUT : one ACL on the way INTO the server VLAN protects the
+!             servers from all seven other VLANs at once, and return
+!             traffic from the servers is left untouched.
+!
+! NONE of these ACLs block DHCP, DNS or HTTP.
+!------------------------------------------------------------------------
+access-list 10 remark === SSH / VTY MANAGEMENT SOURCES ===
+access-list 10 permit 192.168.10.0 0.0.0.255
+!
+access-list 110 remark === VLAN 70 STUDENT LAB CONTAINMENT ===
+access-list 110 permit udp any any eq 67
+access-list 110 permit udp any any eq 68
+access-list 110 permit udp any host 192.168.80.10 eq 53
+access-list 110 permit tcp any host 192.168.80.10 eq 53
+access-list 110 permit tcp any host 192.168.80.20 eq 80
+access-list 110 permit tcp any host 192.168.80.20 eq 443
+access-list 110 permit tcp any host 192.168.80.30 eq 80
+access-list 110 deny   ip any 192.168.10.0 0.0.0.255
+access-list 110 deny   ip any 192.168.60.0 0.0.0.255
+access-list 110 permit ip any any
+!
+access-list 120 remark === SERVER FARM VLAN 80 PROTECTION ===
+access-list 120 permit ip 192.168.10.0 0.0.0.255 192.168.80.0 0.0.0.255
+access-list 120 permit udp any host 192.168.80.10 eq 53
+access-list 120 permit tcp any host 192.168.80.10 eq 53
+access-list 120 permit tcp any host 192.168.80.20 eq 80
+access-list 120 permit tcp any host 192.168.80.20 eq 443
+access-list 120 permit tcp any host 192.168.80.30 eq 80
+access-list 120 permit tcp any host 192.168.80.30 eq 21
+access-list 120 permit tcp any host 192.168.80.30 eq 20
+access-list 120 permit icmp any 192.168.80.0 0.0.0.255
+access-list 120 deny   ip any 192.168.80.0 0.0.0.255
+access-list 120 permit ip any any
+!
+interface GigabitEthernet0/0.70
+ ip access-group 110 in
+ exit
+!
+interface GigabitEthernet0/0.80
+ ip access-group 120 out
+ exit
+!
+! VERIFY : do show access-lists
+! VERIFY : do show ip interface GigabitEthernet0/0.70
+! VERIFY : do show ip interface GigabitEthernet0/0.80
+
+!------------------------------------------------------------------------
+! BLOCK 7 - SSH, CONSOLE AND VTY SECURITY
+! NOTE: the next command is INTERACTIVE. When PT prints
+!       "How many bits in the modulus [512]:" type 1024 and press Enter.
+!------------------------------------------------------------------------
+crypto key generate rsa
+1024
+!
+ip ssh version 2
+ip ssh time-out 60
+ip ssh authentication-retries 3
+!
+line console 0
+ password Cons@2025
+ login
+ logging synchronous
+ exec-timeout 5 0
+ exit
+!
+line vty 0 4
+ password Vty@2025
+ login local
+ transport input ssh
+ access-class 10 in
+ exec-timeout 5 0
+ exit
+!
+line vty 5 15
+ password Vty@2025
+ login local
+ transport input ssh
+ access-class 10 in
+ exec-timeout 5 0
+ exit
+!
+! VERIFY : do show ip ssh
+! VERIFY : do show crypto key mypubkey rsa
+
+!------------------------------------------------------------------------
+! BLOCK 8 - SAVE
+!------------------------------------------------------------------------
+end
+write memory
+
+!=========================================================================
+! FULL VERIFICATION SET FOR R1-CORE (privileged EXEC)
+!   show ip interface brief
+!   show ip route
+!   show vlans
+!   show ip dhcp pool
+!   show ip dhcp binding
+!   show ip dhcp conflict
+!   show access-lists
+!   show ip ssh
+!   show running-config
+!
+! EXPECTED HIGHLIGHTS
+!   - Gi0/0 and all nine subinterfaces show "up / up"
+!   - 9 connected (C) and 9 local (L) routes in the routing table
+!   - 7 DHCP pools, leases appear once the PCs are switched to DHCP
+!   - 3 access lists present; 110 and 120 bound to their subinterfaces
+!=========================================================================

@@ -1,0 +1,201 @@
+!=========================================================================
+! DEVICE  : SW-SRV
+! MODEL   : Cisco 2960-24TT (24 x FastEthernet + 2 x GigabitEthernet)
+! ROLE    : Departmental access switch for Server Room.
+!           All user ports are static access ports in VLAN 80.
+! FILE    : configs/SW-SRV.txt
+! VLAN    : 80 (SERVERS)  -  192.168.80.0/24
+! MGMT IP : 192.168.99.18 /24  (VLAN 99)
+! TESTED  : Cisco Packet Tracer 8.2 and 9.0
+!
+! PORT ROLE MAP
+!   Fa0/1 - Fa0/3   ACCESS VLAN 80  -> 3 servers (static)
+!   Fa0/4 - Fa0/23  UNUSED, VLAN 999 parking + shutdown
+!   Fa0/24            TRUNK  -> SW-DIST Fa0/8
+!   Gi0/1 - Gi0/2     UNUSED, VLAN 999 parking + shutdown
+!
+! PASSWORDS (lab values only)
+!   enable secret ... Univ@Srv#2025
+!   console ......... Cons@2025
+!   vty ............. Vty@2025
+!   SSH user ........ netadmin / Adm1n@Univ#2025
+!=========================================================================
+
+enable
+configure terminal
+
+!------------------------------------------------------------------------
+! BLOCK 1 - IDENTITY AND GLOBAL HARDENING
+!------------------------------------------------------------------------
+hostname SW-SRV
+no ip domain-lookup
+ip domain-name university.local
+enable secret Univ@Srv#2025
+service password-encryption
+username netadmin privilege 15 secret Adm1n@Univ#2025
+banner motd #
+**********************************************************
+*   UNIVERSITY CAMPUS NETWORK  --  SW-SRV
+*   AUTHORISED ACCESS ONLY. All activity is logged.
+**********************************************************
+#
+!
+!------------------------------------------------------------------------
+! BLOCK 2 - VLAN DATABASE
+! The full campus VLAN list is created on every switch so the trunk
+! never has to drop a frame for a locally-unknown VLAN.
+!------------------------------------------------------------------------
+vlan 10
+ name ADMIN
+ exit
+vlan 20
+ name CSE
+ exit
+vlan 30
+ name ECE
+ exit
+vlan 40
+ name MECH
+ exit
+vlan 50
+ name LIBRARY
+ exit
+vlan 60
+ name FACULTY
+ exit
+vlan 70
+ name LAB
+ exit
+vlan 80
+ name SERVERS
+ exit
+vlan 99
+ name MGMT
+ exit
+vlan 999
+ name PARKING-UNUSED
+ exit
+!
+! VERIFY : do show vlan brief
+
+!------------------------------------------------------------------------
+! BLOCK 3 - ACCESS PORTS FOR Server Room
+! Static access mode (no DTP), PortFast for instant link-up, BPDU Guard
+! so a rogue switch plugged into a user port is shut down immediately,
+! and port security limiting each port to one learned MAC address.
+!------------------------------------------------------------------------
+interface range FastEthernet0/1-3
+ description ### Server Room ACCESS PORT - VLAN 80 ###
+ switchport mode access
+ switchport access vlan 80
+ switchport nonegotiate
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+ switchport port-security
+ switchport port-security maximum 1
+ switchport port-security mac-address sticky
+ switchport port-security violation restrict
+ no shutdown
+ exit
+!
+! VERIFY : do show vlan brief
+! VERIFY : do show port-security
+! VERIFY : do show port-security interface FastEthernet0/1
+
+!------------------------------------------------------------------------
+! BLOCK 4 - UPLINK TRUNK TO SW-DIST
+! Native VLAN 99 on both ends. A native-VLAN mismatch is the single most
+! common cause of "one department cannot reach anything" in this design.
+!------------------------------------------------------------------------
+interface FastEthernet0/24
+ description ### TRUNK TO SW-DIST Fa0/8 ###
+ switchport mode trunk
+ switchport trunk native vlan 99
+ switchport trunk allowed vlan 10,20,30,40,50,60,70,80,99
+ no shutdown
+ exit
+!
+! VERIFY : do show interfaces trunk
+
+!------------------------------------------------------------------------
+! BLOCK 5 - UNUSED PORTS
+!------------------------------------------------------------------------
+interface range FastEthernet0/4-23
+ description ### UNUSED - PARKED AND DISABLED ###
+ switchport mode access
+ switchport access vlan 999
+ shutdown
+ exit
+!
+interface range GigabitEthernet0/1-2
+ description ### UNUSED - PARKED AND DISABLED ###
+ switchport mode access
+ switchport access vlan 999
+ shutdown
+ exit
+!
+! VERIFY : do show interfaces status
+
+!------------------------------------------------------------------------
+! BLOCK 6 - MANAGEMENT SVI, SSH, CONSOLE AND VTY
+! NOTE: 'crypto key generate rsa' is INTERACTIVE. Type 1024 at the
+!       "How many bits in the modulus [512]:" prompt, then continue.
+!------------------------------------------------------------------------
+interface Vlan99
+ description ### IN-BAND MANAGEMENT INTERFACE ###
+ ip address 192.168.99.18 255.255.255.0
+ no shutdown
+ exit
+!
+access-list 10 remark === SSH / VTY MANAGEMENT SOURCES ===
+access-list 10 permit 192.168.10.0 0.0.0.255
+!
+ip default-gateway 192.168.99.1
+!
+crypto key generate rsa
+1024
+!
+ip ssh version 2
+!
+line console 0
+ password Cons@2025
+ login
+ logging synchronous
+ exec-timeout 5 0
+ exit
+!
+line vty 0 4
+ password Vty@2025
+ login local
+ transport input ssh
+ access-class 10 in
+ exec-timeout 5 0
+ exit
+!
+line vty 5 15
+ password Vty@2025
+ login local
+ transport input ssh
+ access-class 10 in
+ exec-timeout 5 0
+ exit
+!
+!------------------------------------------------------------------------
+! BLOCK 7 - SAVE
+! 'write memory' is what makes the sticky MAC addresses learned by port
+! security survive a reload. Do not skip it.
+!------------------------------------------------------------------------
+end
+write memory
+
+!=========================================================================
+! FULL VERIFICATION SET FOR SW-SRV
+!   show vlan brief                 -> Fa0/1-3 listed under VLAN 80
+!   show interfaces trunk           -> Fa0/24 trunking, native VLAN 99
+!   show interfaces status          -> unused ports "disabled"
+!   show port-security              -> 3 secured ports, MaxSecureAddr 1
+!   show port-security address      -> sticky MACs of the connected PCs
+!   show ip interface brief         -> Vlan99 192.168.99.18 up/up
+!   ping 192.168.99.1               -> reachability to the router
+!   show spanning-tree vlan 80
+!=========================================================================

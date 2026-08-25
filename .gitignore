@@ -1,0 +1,44 @@
+# ---- Cisco Packet Tracer ----
+# Backup copies PT writes next to the file you are editing
+*.pkt.bak
+*.pka.bak
+*.bak
+
+# Activity / assessment files - not part of this project
+*.pka
+
+# PT logs and crash dumps
+*.log
+logs/
+pt_*.log
+PacketTracer*.log
+*.dmp
+
+# PT autosave / recovery leftovers
+*~
+*.tmp
+*.temp
+
+# ---- OS clutter ----
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+
+# ---- Editors ----
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ---- Archives created while packaging ----
+*.zip
+*.7z
+*.rar
+
+# Keep the real simulation file tracked. Do NOT ignore *.pkt.
