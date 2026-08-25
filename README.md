@@ -15,10 +15,15 @@ on another machine.
 
 | Item | Requirement |
 |------|-------------|
-| Cisco Packet Tracer | **8.2 or newer** (built and verified on 8.2 and 9.0) |
+| Cisco Packet Tracer | **8.2 or newer**. The build machine for this project has **Packet Tracer 9.0.1** installed (`C:\Program Files\Cisco Packet Tracer 9.0.1`) |
 | Cisco account | Required — PT 8.0+ will not open any file until you sign in with a NetAcad / Skills for All account |
 | OS | Windows, macOS or Linux — the `.pkt` is portable across all three |
 | Disk | ~5 MB for the repository |
+
+> **This machine saves in PT 9.0 format.** A `.pkt` written by PT 9.0.1
+> will **not** open on a laptop running 8.2 or older. Either install
+> 9.0.1 on the laptop too, or use `File → Save As…` and pick an older
+> entry in the *Save as type* dropdown before committing.
 
 > **Version warning.** A `.pkt` saved in a newer Packet Tracer **cannot**
 > be opened by an older one. Compatibility runs one way only. Use
