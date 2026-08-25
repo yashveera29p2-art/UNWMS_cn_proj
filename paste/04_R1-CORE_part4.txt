@@ -1,0 +1,25 @@
+ip ssh version 2
+ip ssh time-out 60
+ip ssh authentication-retries 3
+line console 0
+ password Cons@2025
+ login
+ logging synchronous
+ exec-timeout 5 0
+ exit
+line vty 0 4
+ password Vty@2025
+ login local
+ transport input ssh
+ access-class 10 in
+ exec-timeout 5 0
+ exit
+line vty 5 15
+ password Vty@2025
+ login local
+ transport input ssh
+ access-class 10 in
+ exec-timeout 5 0
+ exit
+end
+write memory

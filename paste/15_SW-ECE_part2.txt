@@ -1,0 +1,15 @@
+interface range GigabitEthernet0/1-2
+ description ### UNUSED - PARKED AND DISABLED ###
+ switchport mode access
+ switchport access vlan 999
+ shutdown
+ exit
+interface Vlan99
+ description ### IN-BAND MANAGEMENT INTERFACE ###
+ ip address 192.168.99.13 255.255.255.0
+ no shutdown
+ exit
+access-list 10 remark === SSH / VTY MANAGEMENT SOURCES ===
+access-list 10 permit 192.168.10.0 0.0.0.255
+ip default-gateway 192.168.99.1
+crypto key generate rsa

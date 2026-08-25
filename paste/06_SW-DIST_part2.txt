@@ -1,0 +1,43 @@
+interface FastEthernet0/5
+ description ### TRUNK -> SW-LIB Fa0/24 (VLAN 50) ###
+ exit
+interface FastEthernet0/6
+ description ### TRUNK -> SW-FAC Fa0/24 (VLAN 60) ###
+ exit
+interface FastEthernet0/7
+ description ### TRUNK -> SW-LAB Fa0/24 (VLAN 70) ###
+ exit
+interface FastEthernet0/8
+ description ### TRUNK -> SW-SRV Fa0/24 (VLAN 80) ###
+ exit
+spanning-tree mode pvst
+spanning-tree vlan 10 priority 4096
+spanning-tree vlan 20 priority 4096
+spanning-tree vlan 30 priority 4096
+spanning-tree vlan 40 priority 4096
+spanning-tree vlan 50 priority 4096
+spanning-tree vlan 60 priority 4096
+spanning-tree vlan 70 priority 4096
+spanning-tree vlan 80 priority 4096
+spanning-tree vlan 99 priority 4096
+interface range FastEthernet0/9-24
+ description ### UNUSED - PARKED AND DISABLED ###
+ switchport mode access
+ switchport access vlan 999
+ shutdown
+ exit
+interface GigabitEthernet0/2
+ description ### UNUSED - PARKED AND DISABLED ###
+ switchport mode access
+ switchport access vlan 999
+ shutdown
+ exit
+interface Vlan99
+ description ### IN-BAND MANAGEMENT INTERFACE ###
+ ip address 192.168.99.2 255.255.255.0
+ no shutdown
+ exit
+access-list 10 remark === SSH / VTY MANAGEMENT SOURCES ===
+access-list 10 permit 192.168.10.0 0.0.0.255
+ip default-gateway 192.168.99.1
+crypto key generate rsa

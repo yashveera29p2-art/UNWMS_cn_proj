@@ -1,0 +1,70 @@
+enable
+configure terminal
+hostname SW-ADMIN
+no ip domain-lookup
+ip domain-name university.local
+enable secret Univ@Admin#2025
+service password-encryption
+username netadmin privilege 15 secret Adm1n@Univ#2025
+banner motd #
+**********************************************************
+*   UNIVERSITY CAMPUS NETWORK  --  SW-ADMIN
+*   AUTHORISED ACCESS ONLY. All activity is logged.
+**********************************************************
+#
+vlan 10
+ name ADMIN
+ exit
+vlan 20
+ name CSE
+ exit
+vlan 30
+ name ECE
+ exit
+vlan 40
+ name MECH
+ exit
+vlan 50
+ name LIBRARY
+ exit
+vlan 60
+ name FACULTY
+ exit
+vlan 70
+ name LAB
+ exit
+vlan 80
+ name SERVERS
+ exit
+vlan 99
+ name MGMT
+ exit
+vlan 999
+ name PARKING-UNUSED
+ exit
+interface range FastEthernet0/1-4
+ description ### Administration ACCESS PORT - VLAN 10 ###
+ switchport mode access
+ switchport access vlan 10
+ switchport nonegotiate
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+ switchport port-security
+ switchport port-security maximum 1
+ switchport port-security mac-address sticky
+ switchport port-security violation restrict
+ no shutdown
+ exit
+interface FastEthernet0/24
+ description ### TRUNK TO SW-DIST Fa0/1 ###
+ switchport mode trunk
+ switchport trunk native vlan 99
+ switchport trunk allowed vlan 10,20,30,40,50,60,70,80,99
+ no shutdown
+ exit
+interface range FastEthernet0/5-23
+ description ### UNUSED - PARKED AND DISABLED ###
+ switchport mode access
+ switchport access vlan 999
+ shutdown
+ exit

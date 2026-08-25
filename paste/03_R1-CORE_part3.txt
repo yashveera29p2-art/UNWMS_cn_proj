@@ -1,0 +1,17 @@
+access-list 120 permit udp any host 192.168.80.10 eq 53
+access-list 120 permit tcp any host 192.168.80.10 eq 53
+access-list 120 permit tcp any host 192.168.80.20 eq 80
+access-list 120 permit tcp any host 192.168.80.20 eq 443
+access-list 120 permit tcp any host 192.168.80.30 eq 80
+access-list 120 permit tcp any host 192.168.80.30 eq 21
+access-list 120 permit tcp any host 192.168.80.30 eq 20
+access-list 120 permit icmp any 192.168.80.0 0.0.0.255
+access-list 120 deny   ip any 192.168.80.0 0.0.0.255
+access-list 120 permit ip any any
+interface GigabitEthernet0/0.70
+ ip access-group 110 in
+ exit
+interface GigabitEthernet0/0.80
+ ip access-group 120 out
+ exit
+crypto key generate rsa

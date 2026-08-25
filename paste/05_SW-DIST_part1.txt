@@ -1,0 +1,70 @@
+enable
+configure terminal
+hostname SW-DIST
+no ip domain-lookup
+ip domain-name university.local
+enable secret Univ@Dist#2025
+service password-encryption
+username netadmin privilege 15 secret Adm1n@Univ#2025
+banner motd $
+**********************************************************
+*   UNIVERSITY CAMPUS NETWORK  --  SW-DIST               *
+*   AUTHORISED ACCESS ONLY. All activity is logged.      *
+**********************************************************
+$
+vlan 10
+ name ADMIN
+ exit
+vlan 20
+ name CSE
+ exit
+vlan 30
+ name ECE
+ exit
+vlan 40
+ name MECH
+ exit
+vlan 50
+ name LIBRARY
+ exit
+vlan 60
+ name FACULTY
+ exit
+vlan 70
+ name LAB
+ exit
+vlan 80
+ name SERVERS
+ exit
+vlan 99
+ name MGMT
+ exit
+vlan 999
+ name PARKING-UNUSED
+ exit
+interface GigabitEthernet0/1
+ description ### TRUNK TO R1-CORE Gi0/0 - INTER-VLAN ROUTING UPLINK ###
+ switchport mode trunk
+ switchport trunk native vlan 99
+ switchport trunk allowed vlan 10,20,30,40,50,60,70,80,99
+ no shutdown
+ exit
+interface range FastEthernet0/1-8
+ description ### TRUNK TO DEPARTMENT ACCESS SWITCH ###
+ switchport mode trunk
+ switchport trunk native vlan 99
+ switchport trunk allowed vlan 10,20,30,40,50,60,70,80,99
+ no shutdown
+ exit
+interface FastEthernet0/1
+ description ### TRUNK -> SW-ADMIN Fa0/24 (VLAN 10) ###
+ exit
+interface FastEthernet0/2
+ description ### TRUNK -> SW-CSE Fa0/24 (VLAN 20) ###
+ exit
+interface FastEthernet0/3
+ description ### TRUNK -> SW-ECE Fa0/24 (VLAN 30) ###
+ exit
+interface FastEthernet0/4
+ description ### TRUNK -> SW-MECH Fa0/24 (VLAN 40) ###
+ exit
