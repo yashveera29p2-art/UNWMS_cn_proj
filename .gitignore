@@ -42,3 +42,8 @@ $RECYCLE.BIN/
 *.rar
 
 # Keep the real simulation file tracked. Do NOT ignore *.pkt.
+
+# A clone of this repo accidentally made INSIDE the project folder.
+# Never track a git repo inside a git repo - it commits as a broken
+# submodule pointer that clones cannot resolve.
+CN_proj/
