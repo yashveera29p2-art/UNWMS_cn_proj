@@ -40,7 +40,7 @@ R075458/
 ├── README.md                        <- you are here
 ├── .gitignore
 ├── packet-tracer/
-│   ├── university-network.pkt       <- the simulation (add after building)
+│   ├── university-network.pkt       <- the simulation, built on PT 9.0.1
 │   └── README.md                    <- what belongs in this folder
 ├── configs/
 │   ├── R1-core-router.txt           <- paste-ready CLI, core router
