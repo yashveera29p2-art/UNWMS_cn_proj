@@ -177,12 +177,18 @@ service-policy global_policy global
 ! source restricted to 192.168.10.0/24, and only on the inside interface.
 ! No telnet, no management from the dmz or outside.
 !------------------------------------------------------------------------
+! PT QUIRK: the PT 5506-X already has <Default-RSA-Key>, so 'crypto key
+! generate' asks "Do you really want to replace them? [yes/no]" and would
+! swallow the next pasted line. It therefore comes LAST, followed by the
+! answer 'yes'. On an ASA with no key the 'yes' line is a harmless error.
+!------------------------------------------------------------------------
 username netadmin password Adm1n@Univ#2025
 aaa authentication ssh console LOCAL
-crypto key generate rsa modulus 1024
 ssh 192.168.10.0 255.255.255.0 inside
 ssh version 2
 ssh timeout 5
+crypto key generate rsa modulus 1024
+yes
 !
 ! VERIFY : show ssh
 

@@ -26,9 +26,10 @@ configure terminal
 service-policy global_policy global
 username netadmin password Adm1n@Univ#2025
 aaa authentication ssh console LOCAL
-crypto key generate rsa modulus 1024
 ssh 192.168.10.0 255.255.255.0 inside
 ssh version 2
 ssh timeout 5
+crypto key generate rsa modulus 1024
+yes
 end
 write memory
