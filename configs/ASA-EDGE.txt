@@ -34,19 +34,17 @@
 configure terminal
 
 !------------------------------------------------------------------------
-! BLOCK 1 - IDENTITY AND FACTORY-DEFAULT CLEAN-UP
-! A new 5506-X in Packet Tracer ships with inside = 192.168.1.1/24 and a
-! DHCP server handing out 192.168.1.5-36 on it. That server would race
-! R1-CORE, so it is removed before anything else. An error saying the
-! range does not exist is harmless - it means there was nothing to remove.
+! BLOCK 1 - IDENTITY
+! A real 5506-X can ship with a DHCP server on inside, which would race
+! R1-CORE. The PT 9.0.1 5506-X has none (it rejects 'no dhcpd ... inside'
+! because there is nothing bound), so there is nothing to remove - but
+! check it, because a stray ASA DHCP server is a hard fault to spot.
 !------------------------------------------------------------------------
 hostname ASA-EDGE
 domain-name university.local
 enable password Univ@Asa#2025
-no dhcpd enable inside
-no dhcpd address 192.168.1.5-192.168.1.36 inside
 !
-! VERIFY : show running-config dhcpd     (expect nothing)
+! VERIFY : show running-config dhcpd     (expect no 'dhcpd enable' line)
 
 !------------------------------------------------------------------------
 ! BLOCK 2 - INTERFACES AND SECURITY LEVELS
@@ -118,16 +116,23 @@ route inside 192.168.0.0 255.255.0.0 172.16.0.1
 ! DMZ-WEB    : the DMZ web server is permanently published as
 !              203.0.113.10 (static one-to-one NAT).
 ! Campus -> DMZ traffic is NOT translated; it only matches inside,outside.
+!
+! PT QUIRK: in Packet Tracer's ASA, 'exit' from an object or class/policy
+! sub-mode drops straight to privileged EXEC (#), and a second 'exit' logs
+! you off. So every sub-mode block in this file ends with 'end' followed by
+! 'configure terminal', which lands in (config)# however 'exit' behaves.
 !------------------------------------------------------------------------
 object network CAMPUS-LAN
  subnet 192.168.0.0 255.255.0.0
  nat (inside,outside) dynamic interface
- exit
+end
+configure terminal
 !
 object network DMZ-WEB
  host 172.16.100.10
  nat (dmz,outside) static 203.0.113.10
- exit
+end
+configure terminal
 !
 ! VERIFY : show nat
 ! VERIFY : show xlate        (after a campus PC has pinged the Internet)
@@ -153,14 +158,15 @@ access-group OUTSIDE-IN in interface outside
 !------------------------------------------------------------------------
 class-map inspection_default
  match default-inspection-traffic
- exit
+end
+configure terminal
 policy-map global_policy
  class inspection_default
   inspect icmp
   inspect http
   inspect ftp
-  exit
- exit
+end
+configure terminal
 service-policy global_policy global
 !
 ! VERIFY : show service-policy
