@@ -5,6 +5,12 @@ eight VLANs, eight subnets, router-on-a-stick inter-VLAN routing,
 router-based DHCP, an internal DNS zone, a web portal, an FTP/application
 server, and a layered security posture (SSH, port security, ACLs).
 
+**Extension - edge firewall and DMZ.** A Cisco ASA 5506-X connects the
+campus to a simulated Internet with three security zones (inside / dmz /
+outside), PAT for the campus, a public web server in a DMZ published by
+static NAT, and an outside ACL that admits HTTP only. See
+[`docs/edge-firewall-dmz.md`](docs/edge-firewall-dmz.md).
+
 Everything needed to rebuild this network **by hand** is in this
 repository, so the project survives even if the `.pkt` file will not open
 on another machine.
@@ -52,7 +58,11 @@ R075458/
 │   ├── SW-LIB.txt                   <- VLAN 50
 │   ├── SW-FAC.txt                   <- VLAN 60
 │   ├── SW-LAB.txt                   <- VLAN 70
-│   └── SW-SRV.txt                   <- VLAN 80
+│   ├── SW-SRV.txt                   <- VLAN 80
+│   ├── ASA-EDGE.txt                 <- edge firewall (extension)
+│   ├── SW-DMZ.txt                   <- DMZ switch (extension)
+│   ├── ISP-RTR.txt                  <- simulated ISP (extension)
+│   └── ISP-SW.txt                   <- simulated Internet switch
 ├── docs/
 │   ├── topology-diagram.txt         <- ASCII topology, every device and link
 │   ├── device-list.md               <- device list + VLAN table
@@ -62,10 +72,13 @@ R075458/
 │   ├── build-checklist.md           <- blank file to working demo
 │   ├── testing-results.md           <- 18 tests with expected output
 │   ├── troubleshooting.md           <- 12 realistic failures and fixes
-│   └── portability-notes.md         <- PT versions and simulator limits
+│   ├── portability-notes.md         <- PT versions and simulator limits
+│   └── edge-firewall-dmz.md         <- extension: build, tests, demo, viva
 └── web/
     ├── index.html                   <- paste into SRV-WEB  index.html
-    └── portal.html                  <- paste into SRV-APP  index.html
+    ├── portal.html                  <- paste into SRV-APP  index.html
+    ├── public.html                  <- paste into DMZ-WEB  index.html
+    └── internet.html                <- paste into EXT-SRV  index.html
 ```
 
 ---
@@ -140,6 +153,9 @@ Change every one of them before reusing any of this on real hardware.
 | VTY fallback | — | `Vty@2025` |
 | SSH (all devices) | `netadmin` | `Adm1n@Univ#2025` |
 | FTP on `SRV-APP` | `student` | `Student@2025` |
+| `ASA-EDGE` enable | — | `Univ@Asa#2025` |
+| `SW-DMZ` enable | — | `Univ@Dmz#2025` |
+| `ISP-RTR` enable (simulated ISP) | — | `Isp@2025` |
 
 SSH is reachable **only from `192.168.10.0/24`** — ACL 10 is applied to
 the VTY lines with `access-class 10 in`.
@@ -161,6 +177,12 @@ the VTY lines with `access-class 10 in`.
 | `spanning-tree bpduguard enable` | all access ports | a rogue switch on a user port is err-disabled |
 | Unused ports in VLAN 999 + `shutdown` | all switches | no unattended live port anywhere |
 | Native VLAN 99, not VLAN 1 | all trunks | removes the classic VLAN-hopping exposure |
+| Security levels inside 100 / dmz 50 / outside 0 | ASA-EDGE | nothing from the Internet or the DMZ can open a connection into the campus |
+| PAT to `203.0.113.2` | ASA-EDGE | private campus addresses never appear on the Internet |
+| Static NAT + ACL `OUTSIDE-IN` (HTTP only) | ASA-EDGE | the Internet reaches the DMZ web server on port 80 and nothing else |
+| Stateful inspection incl. `inspect icmp` | ASA-EDGE | only replies to campus-initiated traffic come back in |
+| SSH only from `192.168.10.0/24` on inside | ASA-EDGE | firewall managed from Admin only, never from dmz/outside |
+| No management IP, VTY disabled | SW-DMZ | a compromised DMZ server cannot reach the switch |
 
 ---
 
@@ -238,6 +260,7 @@ git pull
 | [`docs/testing-results.md`](docs/testing-results.md) | Proving it works / demo day |
 | [`docs/troubleshooting.md`](docs/troubleshooting.md) | Something is broken |
 | [`docs/portability-notes.md`](docs/portability-notes.md) | Moving between machines, PT limits |
+| [`docs/edge-firewall-dmz.md`](docs/edge-firewall-dmz.md) | Building, testing and demonstrating the firewall/DMZ extension |
 
 ---
 

@@ -1,0 +1,64 @@
+!=========================================================================
+! DEVICE  : ISP-RTR
+! MODEL   : Cisco 2911 (ISR G2)
+! ROLE    : Simulated Internet Service Provider. NOT part of the campus.
+!           It connects the campus firewall to a stand-in "Internet"
+!           (one public web/DNS server and one outside PC).
+! FILE    : configs/ISP-RTR.txt
+! TESTED  : Cisco Packet Tracer 9.0
+!
+! PORT ROLE MAP
+!   Gi0/0   203.0.113.1/28     -> ASA-EDGE Gi1/1 (campus public block)
+!   Gi0/1   198.51.100.1/24    -> ISP-SW Gi0/1   ("the Internet")
+!   Gi0/2   unused, shutdown
+!
+! DELIBERATELY ABSENT
+!   There is NO route to 192.168.0.0/16 or 172.16.0.0/12. A real ISP
+!   never routes private addresses, so the only way campus traffic gets
+!   an answer is via the ASA's NAT. If a campus PC can reach the Internet,
+!   NAT is proven to be working.
+!
+! PASSWORDS (lab values only)
+!   enable secret ... Isp@2025
+!=========================================================================
+
+enable
+configure terminal
+
+!------------------------------------------------------------------------
+! BLOCK 1 - IDENTITY
+!------------------------------------------------------------------------
+hostname ISP-RTR
+no ip domain-lookup
+enable secret Isp@2025
+service password-encryption
+!
+!------------------------------------------------------------------------
+! BLOCK 2 - INTERFACES
+! Both networks are directly connected, so no routing is needed here.
+!------------------------------------------------------------------------
+interface GigabitEthernet0/0
+ description ### TO UNIVERSITY ASA-EDGE Gi1/1 ###
+ ip address 203.0.113.1 255.255.255.240
+ no shutdown
+ exit
+!
+interface GigabitEthernet0/1
+ description ### INTERNET SEGMENT - ISP-SW Gi0/1 ###
+ ip address 198.51.100.1 255.255.255.0
+ no shutdown
+ exit
+!
+interface GigabitEthernet0/2
+ description ### UNUSED ###
+ shutdown
+ exit
+!
+! VERIFY : do show ip interface brief
+! VERIFY : do show ip route   (2 x C, 2 x L, and nothing for 192.168.x.x)
+
+!------------------------------------------------------------------------
+! BLOCK 3 - SAVE
+!------------------------------------------------------------------------
+end
+write memory

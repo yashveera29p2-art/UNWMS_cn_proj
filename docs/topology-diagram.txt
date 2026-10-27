@@ -119,3 +119,33 @@ LEGEND
    up. The crossover cable is used anyway because it is the answer
    expected in an exam and it removes all ambiguity.
 =========================================================================
+
+=========================================================================
+ EXTENSION - EDGE FIREWALL, NAT AND DMZ
+=========================================================================
+
+        EXT-PC .10            EXT-SRV .20   (web + DNS)
+             \                  /
+            Fa0/1           Fa0/2
+                 [ ISP-SW ]          198.51.100.0/24  "THE INTERNET"
+                   Gi0/1
+                     |
+                   Gi0/1 .1
+                 [ ISP-RTR ]
+                   Gi0/0 203.0.113.1
+                     |               203.0.113.0/28  public block
+                   Gi1/1 outside .2  (level 0)   PAT for campus
+                 [ ASA-EDGE ] ------ Gi1/3 dmz 172.16.100.1 (level 50)
+                   Gi1/2 inside           |
+                   172.16.0.2 (100)     Gi0/1
+                     |                [ SW-DMZ ]  VLAN 100
+                     | 172.16.0.0/30    Fa0/1
+                     |                    |
+                   Gi0/1 172.16.0.1     DMZ-WEB 172.16.100.10
+                 [ R1-CORE ]                 = 203.0.113.10 (static NAT)
+                   Gi0/0 trunk -> SW-DIST -> campus (unchanged)
+
+  ROUTED links added : 2   (R1-CORE <-> ASA, ASA <-> ISP-RTR)
+  ACCESS links added : 5
+  TOTAL cables       : 55
+=========================================================================

@@ -151,3 +151,31 @@ Every one of them is unique.
 | `portal.university.local` | A | 192.168.80.30 | Student/staff application portal (SRV-APP) |
 | `university.local`        | A | 192.168.80.20 | Bare domain, points at the web server |
 | `ftp.university.local`    | A | 192.168.80.30 | File service on SRV-APP |
+
+---
+
+## 7. Extension - edge firewall and DMZ
+
+Full detail in [`edge-firewall-dmz.md`](edge-firewall-dmz.md).
+
+| Device | Interface | Address | Network | Zone |
+|--------|-----------|---------|---------|------|
+| R1-CORE | Gi0/1 | 172.16.0.1/30 | 172.16.0.0/30 | campus transit |
+| ASA-EDGE | Gi1/2 (inside) | 172.16.0.2/30 | 172.16.0.0/30 | inside, level 100 |
+| ASA-EDGE | Gi1/3 (dmz) | 172.16.100.1/24 | 172.16.100.0/24 | dmz, level 50 |
+| ASA-EDGE | Gi1/1 (outside) | 203.0.113.2/28 | 203.0.113.0/28 | outside, level 0 |
+| DMZ-WEB | Fa0 | 172.16.100.10/24, gw .1 | 172.16.100.0/24 | dmz |
+| DMZ-WEB (published) | static NAT | 203.0.113.10 | 203.0.113.0/28 | outside |
+| ISP-RTR | Gi0/0 | 203.0.113.1/28 | 203.0.113.0/28 | Internet |
+| ISP-RTR | Gi0/1 | 198.51.100.1/24 | 198.51.100.0/24 | Internet |
+| EXT-PC | Fa0 | 198.51.100.10/24, gw .1, DNS .20 | 198.51.100.0/24 | Internet |
+| EXT-SRV | Fa0 | 198.51.100.20/24, gw .1, DNS .20 | 198.51.100.0/24 | Internet |
+
+New DNS records:
+
+| Server | Name | Address | Why |
+|--------|------|---------|-----|
+| SRV-DNS (campus) | www.university.edu | 172.16.100.10 | split DNS: campus goes to the real DMZ address |
+| SRV-DNS (campus) | www.example.com | 198.51.100.20 | lets campus PCs browse the Internet site by name |
+| EXT-SRV (Internet) | www.university.edu | 203.0.113.10 | Internet users get the public NAT address |
+| EXT-SRV (Internet) | www.example.com | 198.51.100.20 | |

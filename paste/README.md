@@ -1,7 +1,8 @@
 # paste/ - Ready-to-Paste Configuration Chunks
 
-Thirty-one files. Each one is a single copy-paste operation into one
-device's CLI, in numbered order.
+Thirty-seven files. Each one is a single copy-paste operation into one
+device's CLI, in numbered order. Files 01-31 build the campus; 32-37 add
+the edge firewall and DMZ.
 
 ## Why these exist
 
@@ -53,6 +54,20 @@ For each file, in numeric order:
 | 23-25 | `23..25_SW-FAC_*` | SW-FAC | Same three-step pattern |
 | 26-28 | `26..28_SW-LAB_*` | SW-LAB | Same three-step pattern |
 | 29-31 | `29..31_SW-SRV_*` | SW-SRV | Same three-step pattern |
+
+### Edge firewall and DMZ extension (files 32-37)
+
+These add the Internet edge. Full walkthrough with cabling and tests:
+`../docs/edge-firewall-dmz.md`.
+
+| # | File | Device | Notes |
+|---|------|--------|-------|
+| 32 | `32_R1-CORE_edge-uplink.txt` | R1-CORE | **Only if R1 is already built.** Type `enable` + `Univ@Core#2025` by hand first. Gi0/1 uplink + default route. (Files 01-02 already contain these lines for a fresh build.) |
+| 33 | `33_ASA-EDGE_part1.txt` | ASA-EDGE | Type `enable` by hand, press Enter at `Password:`, then paste. Clean-up, interfaces, security levels |
+| 34 | `34_ASA-EDGE_part2.txt` | ASA-EDGE | Routes, NAT, outside ACL, inspection, SSH, `write memory` |
+| 35 | `35_SW-DMZ.txt` | SW-DMZ | Whole switch in one paste. No RSA step - this switch has no SSH |
+| 36 | `36_ISP-RTR.txt` | ISP-RTR | Simulated ISP |
+| 37 | `37_ISP-SW.txt` | ISP-SW | Hostname only |
 
 Every `part2` on a switch, and `part3` on the router, ends on the line
 `crypto key generate rsa`. That is deliberate. Packet Tracer will print:

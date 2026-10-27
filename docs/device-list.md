@@ -78,3 +78,24 @@ modules, no add-on images.
 
 Server VLAN 80 has **no pool at all**; `.10`, `.20` and `.30` are typed in
 by hand on each server.
+
+---
+
+## 3. Extension - edge firewall and DMZ
+
+| Device | Model | Role |
+|--------|-------|------|
+| ASA-EDGE | Cisco ASA 5506-X | Edge firewall: zones, NAT/PAT, outside ACL, inspection |
+| SW-DMZ | Cisco 2960-24TT | DMZ access switch, VLAN 100, no management IP |
+| DMZ-WEB | Server-PT | Public web server (www.university.edu) |
+| ISP-RTR | Cisco 2911 | Simulated ISP router |
+| ISP-SW | Cisco 2960-24TT | Simulated Internet switch |
+| EXT-SRV | Server-PT | Internet web + DNS server (www.example.com) |
+| EXT-PC | PC-PT | Outside user / attacker |
+
+**Totals with the extension** - 2 routers, 1 firewall, 11 switches,
+37 PCs, 5 servers = **56 devices**, **55 cables**.
+
+| VLAN | Name | Where | Network |
+|------|------|-------|---------|
+| 100 | DMZ | SW-DMZ only, not on any campus trunk | 172.16.100.0/24 |

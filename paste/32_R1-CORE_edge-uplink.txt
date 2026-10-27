@@ -1,0 +1,11 @@
+configure terminal
+interface GigabitEthernet0/1
+ description ### ROUTED UPLINK TO ASA-EDGE Gi1/2 (inside) ###
+ ip address 172.16.0.1 255.255.255.252
+ duplex auto
+ speed auto
+ no shutdown
+ exit
+ip route 0.0.0.0 0.0.0.0 172.16.0.2
+end
+write memory

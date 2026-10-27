@@ -598,3 +598,11 @@ Fill this in while demonstrating.
 
 This is the clearest possible visual proof that router-on-a-stick is
 doing what the configuration claims.
+
+---
+
+## Extension tests (F1-F18)
+
+The edge firewall and DMZ extension has its own eighteen tests, with a
+Pass/Fail column, in [`edge-firewall-dmz.md`](edge-firewall-dmz.md)
+section 3. Five of them (F8-F11, F14) are designed to fail.

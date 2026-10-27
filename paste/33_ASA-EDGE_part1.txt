@@ -1,0 +1,42 @@
+configure terminal
+hostname ASA-EDGE
+domain-name university.local
+enable password Univ@Asa#2025
+no dhcpd enable inside
+no dhcpd address 192.168.1.5-192.168.1.36 inside
+interface GigabitEthernet1/1
+ description ### OUTSIDE - TO ISP-RTR Gi0/0 ###
+ nameif outside
+ security-level 0
+ ip address 203.0.113.2 255.255.255.240
+ no shutdown
+ exit
+interface GigabitEthernet1/2
+ description ### INSIDE - TO R1-CORE Gi0/1 ###
+ nameif inside
+ security-level 100
+ ip address 172.16.0.2 255.255.255.252
+ no shutdown
+ exit
+interface GigabitEthernet1/3
+ description ### DMZ - TO SW-DMZ Gi0/1 ###
+ nameif dmz
+ security-level 50
+ ip address 172.16.100.1 255.255.255.0
+ no shutdown
+ exit
+interface GigabitEthernet1/4
+ shutdown
+ exit
+interface GigabitEthernet1/5
+ shutdown
+ exit
+interface GigabitEthernet1/6
+ shutdown
+ exit
+interface GigabitEthernet1/7
+ shutdown
+ exit
+interface GigabitEthernet1/8
+ shutdown
+ exit

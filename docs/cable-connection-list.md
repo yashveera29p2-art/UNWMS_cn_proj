@@ -128,3 +128,20 @@ bolt) category:
 > but if you later move a PC to a different port you must clear the old
 > sticky entry (`no switchport port-security mac-address sticky` then
 > re-enable) or the port will report violations.
+
+---
+
+## Section C - Edge firewall and DMZ extension (7 cables)
+
+| # | From | Port | | To | Port | Role | Cable |
+|---|------|------|-|----|------|------|-------|
+| 49 | R1-CORE | Gi0/1 | → | ASA-EDGE | Gi1/2 | ROUTED, inside | Copper Cross-Over |
+| 50 | ASA-EDGE | Gi1/1 | → | ISP-RTR | Gi0/0 | ROUTED, outside | Copper Cross-Over |
+| 51 | ASA-EDGE | Gi1/3 | → | SW-DMZ | Gi0/1 | ACCESS VLAN 100, dmz | Copper Straight-Through |
+| 52 | DMZ-WEB | FastEthernet0 | → | SW-DMZ | Fa0/1 | ACCESS VLAN 100 | Copper Straight-Through |
+| 53 | ISP-RTR | Gi0/1 | → | ISP-SW | Gi0/1 | Internet segment | Copper Straight-Through |
+| 54 | EXT-PC | FastEthernet0 | → | ISP-SW | Fa0/1 | Internet segment | Copper Straight-Through |
+| 55 | EXT-SRV | FastEthernet0 | → | ISP-SW | Fa0/2 | Internet segment | Copper Straight-Through |
+
+R1-CORE Gi0/1 is no longer an unused port. If cable 49 or 50 stays red
+after the ASA is configured, replace it with Copper Straight-Through.

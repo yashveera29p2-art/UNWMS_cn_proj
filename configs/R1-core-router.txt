@@ -4,6 +4,8 @@
 ! ROLE    : Core router. Router-on-a-Stick inter-VLAN gateway for
 !           VLANs 10-80 + 99, DHCP server for VLANs 10-70,
 !           ACL enforcement point, SSH management head-end.
+!           Gi0/1 is the routed uplink to the ASA-EDGE firewall and
+!           carries the campus default route to the Internet.
 ! FILE    : configs/R1-core-router.txt
 ! TESTED  : Cisco Packet Tracer 8.2 and 9.0
 !
@@ -58,9 +60,11 @@ interface GigabitEthernet0/0
  exit
 !
 interface GigabitEthernet0/1
- description ### UNUSED - ADMINISTRATIVELY DOWN ###
- no ip address
- shutdown
+ description ### ROUTED UPLINK TO ASA-EDGE Gi1/2 (inside) ###
+ ip address 172.16.0.1 255.255.255.252
+ duplex auto
+ speed auto
+ no shutdown
  exit
 !
 interface GigabitEthernet0/2
@@ -133,8 +137,20 @@ interface GigabitEthernet0/0.99
  exit
 !
 ! VERIFY : do show ip interface brief
-! VERIFY : do show ip route      (expect 9 x C and 9 x L routes)
+! VERIFY : do show ip route      (expect 10 x C and 10 x L routes)
 ! VERIFY : do show vlans         (802.1Q subinterface statistics)
+
+!------------------------------------------------------------------------
+! BLOCK 3b - DEFAULT ROUTE TO THE EDGE FIREWALL
+! Every destination that is not a campus subnet goes to ASA-EDGE, which
+! does NAT and decides what may leave. The ASA has the matching summary
+! route 192.168.0.0/16 back to 172.16.0.1.
+! The existing ACLs are untouched: 110 ends in 'permit ip any any', so
+! the student labs can still reach the Internet and the DMZ.
+!------------------------------------------------------------------------
+ip route 0.0.0.0 0.0.0.0 172.16.0.2
+!
+! VERIFY : do show ip route      (expect S* 0.0.0.0/0 [1/0] via 172.16.0.2)
 
 !------------------------------------------------------------------------
 ! BLOCK 4 - DHCP EXCLUSIONS
@@ -334,7 +350,8 @@ write memory
 !
 ! EXPECTED HIGHLIGHTS
 !   - Gi0/0 and all nine subinterfaces show "up / up"
-!   - 9 connected (C) and 9 local (L) routes in the routing table
+!   - Gi0/1 172.16.0.1 "up / up" once ASA-EDGE is cabled and configured
+!   - 10 connected (C), 10 local (L) and 1 static default (S*) route
 !   - 7 DHCP pools, leases appear once the PCs are switched to DHCP
 !   - 3 access lists present; 110 and 120 bound to their subinterfaces
 !=========================================================================

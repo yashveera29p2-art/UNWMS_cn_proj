@@ -1,0 +1,20 @@
+!=========================================================================
+! DEVICE  : ISP-SW
+! MODEL   : Cisco 2960-24TT
+! ROLE    : Plain switch inside the simulated Internet. It belongs to the
+!           "ISP", not the campus, so it is left at factory defaults
+!           (all ports in VLAN 1). Only the hostname is set.
+! FILE    : configs/ISP-SW.txt
+!
+! PORT ROLE MAP
+!   Gi0/1   -> ISP-RTR Gi0/1
+!   Fa0/1   -> EXT-PC
+!   Fa0/2   -> EXT-SRV
+!=========================================================================
+
+enable
+configure terminal
+hostname ISP-SW
+no ip domain-lookup
+end
+write memory

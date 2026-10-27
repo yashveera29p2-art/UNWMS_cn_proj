@@ -1,0 +1,31 @@
+route outside 0.0.0.0 0.0.0.0 203.0.113.1
+route inside 192.168.0.0 255.255.0.0 172.16.0.1
+object network CAMPUS-LAN
+ subnet 192.168.0.0 255.255.0.0
+ nat (inside,outside) dynamic interface
+ exit
+object network DMZ-WEB
+ host 172.16.100.10
+ nat (dmz,outside) static 203.0.113.10
+ exit
+access-list OUTSIDE-IN extended permit tcp any host 172.16.100.10 eq www
+access-group OUTSIDE-IN in interface outside
+class-map inspection_default
+ match default-inspection-traffic
+ exit
+policy-map global_policy
+ class inspection_default
+  inspect icmp
+  inspect http
+  inspect ftp
+  exit
+ exit
+service-policy global_policy global
+username netadmin password Adm1n@Univ#2025
+aaa authentication ssh console LOCAL
+crypto key generate rsa modulus 1024
+ssh 192.168.10.0 255.255.255.0 inside
+ssh version 2
+ssh timeout 5
+end
+write memory

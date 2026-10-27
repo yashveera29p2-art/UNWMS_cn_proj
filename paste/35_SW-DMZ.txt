@@ -1,0 +1,65 @@
+enable
+configure terminal
+hostname SW-DMZ
+no ip domain-lookup
+enable secret Univ@Dmz#2025
+service password-encryption
+banner motd #
+**********************************************************
+*   UNIVERSITY CAMPUS NETWORK  --  SW-DMZ
+*   AUTHORISED ACCESS ONLY. All activity is logged.
+**********************************************************
+#
+vlan 100
+ name DMZ
+ exit
+vlan 999
+ name PARKING-UNUSED
+ exit
+interface GigabitEthernet0/1
+ description ### UPLINK TO ASA-EDGE Gi1/3 (dmz) ###
+ switchport mode access
+ switchport access vlan 100
+ switchport nonegotiate
+ no shutdown
+ exit
+interface FastEthernet0/1
+ description ### DMZ-WEB SERVER - VLAN 100 ###
+ switchport mode access
+ switchport access vlan 100
+ switchport nonegotiate
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+ switchport port-security
+ switchport port-security maximum 1
+ switchport port-security mac-address sticky
+ switchport port-security violation restrict
+ no shutdown
+ exit
+interface range FastEthernet0/2-24
+ description ### UNUSED - PARKED AND DISABLED ###
+ switchport mode access
+ switchport access vlan 999
+ shutdown
+ exit
+interface GigabitEthernet0/2
+ description ### UNUSED - PARKED AND DISABLED ###
+ switchport mode access
+ switchport access vlan 999
+ shutdown
+ exit
+interface Vlan1
+ no ip address
+ shutdown
+ exit
+line console 0
+ password Cons@2025
+ login
+ logging synchronous
+ exec-timeout 5 0
+ exit
+line vty 0 15
+ transport input none
+ exit
+end
+write memory

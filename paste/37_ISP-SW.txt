@@ -1,0 +1,6 @@
+enable
+configure terminal
+hostname ISP-SW
+no ip domain-lookup
+end
+write memory

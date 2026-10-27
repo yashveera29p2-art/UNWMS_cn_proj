@@ -1,0 +1,131 @@
+!=========================================================================
+! DEVICE  : SW-DMZ
+! MODEL   : Cisco 2960-24TT (24 x FastEthernet + 2 x GigabitEthernet)
+! ROLE    : DMZ access switch. Connects the public web server to the
+!           ASA-EDGE dmz interface. Completely separate from the campus
+!           switching fabric - no trunk to SW-DIST, no campus VLANs.
+! FILE    : configs/SW-DMZ.txt
+! VLAN    : 100 (DMZ)  -  172.16.100.0/24
+! MGMT IP : none - console only (see BLOCK 4)
+! TESTED  : Cisco Packet Tracer 9.0
+!
+! PORT ROLE MAP
+!   Gi0/1             ACCESS VLAN 100 -> ASA-EDGE Gi1/3 (dmz)
+!   Fa0/1             ACCESS VLAN 100 -> DMZ-WEB (port-secured)
+!   Fa0/2 - Fa0/24    UNUSED, VLAN 999 parking + shutdown
+!   Gi0/2             UNUSED, VLAN 999 parking + shutdown
+!
+! PASSWORDS (lab values only)
+!   enable secret ... Univ@Dmz#2025
+!   console ......... Cons@2025
+!=========================================================================
+
+enable
+configure terminal
+
+!------------------------------------------------------------------------
+! BLOCK 1 - IDENTITY AND GLOBAL HARDENING
+!------------------------------------------------------------------------
+hostname SW-DMZ
+no ip domain-lookup
+enable secret Univ@Dmz#2025
+service password-encryption
+banner motd #
+**********************************************************
+*   UNIVERSITY CAMPUS NETWORK  --  SW-DMZ
+*   AUTHORISED ACCESS ONLY. All activity is logged.
+**********************************************************
+#
+!
+!------------------------------------------------------------------------
+! BLOCK 2 - VLAN DATABASE
+! Only the DMZ VLAN and the parking VLAN. The campus VLANs are
+! deliberately absent: nothing on this switch can ever carry them.
+!------------------------------------------------------------------------
+vlan 100
+ name DMZ
+ exit
+vlan 999
+ name PARKING-UNUSED
+ exit
+!
+! VERIFY : do show vlan brief
+
+!------------------------------------------------------------------------
+! BLOCK 3 - PORTS
+! The uplink to the firewall is an access port, not a trunk - the ASA
+! dmz interface is a single untagged network.
+!------------------------------------------------------------------------
+interface GigabitEthernet0/1
+ description ### UPLINK TO ASA-EDGE Gi1/3 (dmz) ###
+ switchport mode access
+ switchport access vlan 100
+ switchport nonegotiate
+ no shutdown
+ exit
+!
+interface FastEthernet0/1
+ description ### DMZ-WEB SERVER - VLAN 100 ###
+ switchport mode access
+ switchport access vlan 100
+ switchport nonegotiate
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+ switchport port-security
+ switchport port-security maximum 1
+ switchport port-security mac-address sticky
+ switchport port-security violation restrict
+ no shutdown
+ exit
+!
+interface range FastEthernet0/2-24
+ description ### UNUSED - PARKED AND DISABLED ###
+ switchport mode access
+ switchport access vlan 999
+ shutdown
+ exit
+!
+interface GigabitEthernet0/2
+ description ### UNUSED - PARKED AND DISABLED ###
+ switchport mode access
+ switchport access vlan 999
+ shutdown
+ exit
+!
+! VERIFY : do show vlan brief
+! VERIFY : do show port-security
+
+!------------------------------------------------------------------------
+! BLOCK 4 - NO IN-BAND MANAGEMENT
+! A management address in the DMZ would be reachable from a compromised
+! DMZ server, so this switch gets none. VLAN 1 is shut, VTY is disabled
+! outright, and the console is the only way in.
+!------------------------------------------------------------------------
+interface Vlan1
+ no ip address
+ shutdown
+ exit
+!
+line console 0
+ password Cons@2025
+ login
+ logging synchronous
+ exec-timeout 5 0
+ exit
+!
+line vty 0 15
+ transport input none
+ exit
+!
+!------------------------------------------------------------------------
+! BLOCK 5 - SAVE
+!------------------------------------------------------------------------
+end
+write memory
+
+!=========================================================================
+! FULL VERIFICATION SET FOR SW-DMZ
+!   show vlan brief            -> Gi0/1 and Fa0/1 under VLAN 100
+!   show port-security         -> Fa0/1 secured, MaxSecureAddr 1
+!   show interfaces status     -> unused ports "disabled"
+!=========================================================================

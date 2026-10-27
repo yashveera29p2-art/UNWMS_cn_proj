@@ -1,0 +1,22 @@
+enable
+configure terminal
+hostname ISP-RTR
+no ip domain-lookup
+enable secret Isp@2025
+service password-encryption
+interface GigabitEthernet0/0
+ description ### TO UNIVERSITY ASA-EDGE Gi1/1 ###
+ ip address 203.0.113.1 255.255.255.240
+ no shutdown
+ exit
+interface GigabitEthernet0/1
+ description ### INTERNET SEGMENT - ISP-SW Gi0/1 ###
+ ip address 198.51.100.1 255.255.255.0
+ no shutdown
+ exit
+interface GigabitEthernet0/2
+ description ### UNUSED ###
+ shutdown
+ exit
+end
+write memory

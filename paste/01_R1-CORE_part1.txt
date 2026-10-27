@@ -21,9 +21,11 @@ interface GigabitEthernet0/0
  no shutdown
  exit
 interface GigabitEthernet0/1
- description ### UNUSED - ADMINISTRATIVELY DOWN ###
- no ip address
- shutdown
+ description ### ROUTED UPLINK TO ASA-EDGE Gi1/2 (inside) ###
+ ip address 172.16.0.1 255.255.255.252
+ duplex auto
+ speed auto
+ no shutdown
  exit
 interface GigabitEthernet0/2
  description ### UNUSED - ADMINISTRATIVELY DOWN ###

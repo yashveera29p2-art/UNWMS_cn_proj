@@ -1,0 +1,206 @@
+!=========================================================================
+! DEVICE  : ASA-EDGE
+! MODEL   : Cisco ASA 5506-X
+! ROLE    : Campus edge firewall. Three security zones:
+!             inside  (level 100) -> R1-CORE, the whole campus
+!             dmz     (level  50) -> SW-DMZ, the public web server
+!             outside (level   0) -> ISP-RTR, the Internet
+!           PAT for the campus, static NAT for the DMZ web server,
+!           stateful inspection, an outside ACL that publishes HTTP only.
+! FILE    : configs/ASA-EDGE.txt
+! TESTED  : Cisco Packet Tracer 9.0
+!
+! PORT ROLE MAP
+!   Gi1/1   outside  203.0.113.2/28     -> ISP-RTR Gi0/0
+!   Gi1/2   inside   172.16.0.2/30      -> R1-CORE Gi0/1
+!   Gi1/3   dmz      172.16.100.1/24    -> SW-DMZ Gi0/1
+!   Gi1/4 - Gi1/8    unused, shutdown
+!
+! HOW TO USE
+!   1. Click ASA-EDGE -> CLI tab -> press Enter.
+!   2. TYPE 'enable' by hand. At "Password:" just press Enter (a new ASA
+!      has no enable password; BLOCK 1 sets one). This step is not in the
+!      file because a pasted 'enable' would swallow the next pasted line
+!      as its password.
+!   3. Paste the file from 'configure terminal' to the end. Nothing in it
+!      is interactive on the ASA.
+!   4. It finishes with 'write memory'.
+!
+! PASSWORD SUMMARY (lab values only - change for a real network)
+!   enable .............. Univ@Asa#2025
+!   SSH local user ...... netadmin / Adm1n@Univ#2025
+!=========================================================================
+
+configure terminal
+
+!------------------------------------------------------------------------
+! BLOCK 1 - IDENTITY AND FACTORY-DEFAULT CLEAN-UP
+! A new 5506-X in Packet Tracer ships with inside = 192.168.1.1/24 and a
+! DHCP server handing out 192.168.1.5-36 on it. That server would race
+! R1-CORE, so it is removed before anything else. An error saying the
+! range does not exist is harmless - it means there was nothing to remove.
+!------------------------------------------------------------------------
+hostname ASA-EDGE
+domain-name university.local
+enable password Univ@Asa#2025
+no dhcpd enable inside
+no dhcpd address 192.168.1.5-192.168.1.36 inside
+!
+! VERIFY : show running-config dhcpd     (expect nothing)
+
+!------------------------------------------------------------------------
+! BLOCK 2 - INTERFACES AND SECURITY LEVELS
+! The security level is the ASA's core rule: traffic may flow from a
+! HIGHER level to a LOWER one without an ACL, never the other way. So:
+!   inside (100) -> dmz (50) -> outside (0)   allowed, replies tracked
+!   outside -> dmz                            only what BLOCK 5 permits
+!   outside -> inside, dmz -> inside          always denied
+!------------------------------------------------------------------------
+interface GigabitEthernet1/1
+ description ### OUTSIDE - TO ISP-RTR Gi0/0 ###
+ nameif outside
+ security-level 0
+ ip address 203.0.113.2 255.255.255.240
+ no shutdown
+ exit
+!
+interface GigabitEthernet1/2
+ description ### INSIDE - TO R1-CORE Gi0/1 ###
+ nameif inside
+ security-level 100
+ ip address 172.16.0.2 255.255.255.252
+ no shutdown
+ exit
+!
+interface GigabitEthernet1/3
+ description ### DMZ - TO SW-DMZ Gi0/1 ###
+ nameif dmz
+ security-level 50
+ ip address 172.16.100.1 255.255.255.0
+ no shutdown
+ exit
+!
+interface GigabitEthernet1/4
+ shutdown
+ exit
+interface GigabitEthernet1/5
+ shutdown
+ exit
+interface GigabitEthernet1/6
+ shutdown
+ exit
+interface GigabitEthernet1/7
+ shutdown
+ exit
+interface GigabitEthernet1/8
+ shutdown
+ exit
+!
+! VERIFY : show interface ip brief
+! VERIFY : show nameif
+
+!------------------------------------------------------------------------
+! BLOCK 3 - ROUTING
+! Default route to the ISP. One summary route sends every campus subnet
+! (192.168.10.0 - 192.168.99.0) back to R1-CORE.
+!------------------------------------------------------------------------
+route outside 0.0.0.0 0.0.0.0 203.0.113.1
+route inside 192.168.0.0 255.255.0.0 172.16.0.1
+!
+! VERIFY : show route
+
+!------------------------------------------------------------------------
+! BLOCK 4 - NAT
+! CAMPUS-LAN : every campus host leaving to the Internet is translated to
+!              the outside interface address 203.0.113.2 (PAT). The ISP
+!              has no route to 192.168.0.0/16, so without this nothing on
+!              campus could reach the Internet at all.
+! DMZ-WEB    : the DMZ web server is permanently published as
+!              203.0.113.10 (static one-to-one NAT).
+! Campus -> DMZ traffic is NOT translated; it only matches inside,outside.
+!------------------------------------------------------------------------
+object network CAMPUS-LAN
+ subnet 192.168.0.0 255.255.0.0
+ nat (inside,outside) dynamic interface
+ exit
+!
+object network DMZ-WEB
+ host 172.16.100.10
+ nat (dmz,outside) static 203.0.113.10
+ exit
+!
+! VERIFY : show nat
+! VERIFY : show xlate        (after a campus PC has pinged the Internet)
+
+!------------------------------------------------------------------------
+! BLOCK 5 - OUTSIDE ACCESS LIST
+! The only thing the Internet may start is HTTP to the DMZ web server.
+! Since ASA 8.3 the ACL names the REAL address (172.16.100.10), not the
+! published one (203.0.113.10). Ping to the web server is deliberately
+! NOT permitted, so the demo can show "web works, ping is dropped".
+!------------------------------------------------------------------------
+access-list OUTSIDE-IN extended permit tcp any host 172.16.100.10 eq www
+access-group OUTSIDE-IN in interface outside
+!
+! VERIFY : show access-list OUTSIDE-IN     (hitcnt rises per HTTP session)
+
+!------------------------------------------------------------------------
+! BLOCK 6 - STATEFUL INSPECTION
+! The ASA tracks TCP and UDP sessions automatically. ICMP is not tracked
+! by default, so without 'inspect icmp' a campus PC's ping to the
+! Internet would leave but the echo-reply would be dropped coming back.
+! "already exists" style messages here are harmless.
+!------------------------------------------------------------------------
+class-map inspection_default
+ match default-inspection-traffic
+ exit
+policy-map global_policy
+ class inspection_default
+  inspect icmp
+  inspect http
+  inspect ftp
+  exit
+ exit
+service-policy global_policy global
+!
+! VERIFY : show service-policy
+
+!------------------------------------------------------------------------
+! BLOCK 7 - MANAGEMENT: SSH FROM ADMINISTRATION ONLY
+! Same policy as every other device in the campus: SSH, local user,
+! source restricted to 192.168.10.0/24, and only on the inside interface.
+! No telnet, no management from the dmz or outside.
+!------------------------------------------------------------------------
+username netadmin password Adm1n@Univ#2025
+aaa authentication ssh console LOCAL
+crypto key generate rsa modulus 1024
+ssh 192.168.10.0 255.255.255.0 inside
+ssh version 2
+ssh timeout 5
+!
+! VERIFY : show ssh
+
+!------------------------------------------------------------------------
+! BLOCK 8 - SAVE
+!------------------------------------------------------------------------
+end
+write memory
+
+!=========================================================================
+! FULL VERIFICATION SET FOR ASA-EDGE (privileged EXEC)
+!   show interface ip brief
+!   show nameif
+!   show route
+!   show nat
+!   show xlate
+!   show conn
+!   show access-list
+!   show service-policy
+!
+! EXPECTED HIGHLIGHTS
+!   - Gi1/1, Gi1/2, Gi1/3 up/up with the three addresses above
+!   - nameif shows outside 0, inside 100, dmz 50
+!   - S* 0.0.0.0/0 via 203.0.113.1 and S 192.168.0.0/16 via 172.16.0.1
+!   - after campus traffic: PAT xlate entries to 203.0.113.2
+!   - after Internet HTTP: OUTSIDE-IN hitcnt > 0
+!=========================================================================

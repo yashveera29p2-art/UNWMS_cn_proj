@@ -1,0 +1,51 @@
+<html>
+<head>
+<title>University Public Website</title>
+</head>
+<body bgcolor="#F4F6F8">
+
+<center>
+<font size="6" color="#0D47A1"><b>UNIVERSITY PUBLIC WEBSITE</b></font><br>
+<font size="4" color="#333333">www.university.edu</font><br>
+<font size="2" color="#666666">Served by DMZ-WEB &nbsp;|&nbsp; 172.16.100.10 (DMZ) &nbsp;|&nbsp; published as 203.0.113.10</font>
+</center>
+
+<hr>
+
+<font size="4" color="#0D47A1"><b>Welcome</b></font>
+<br><br>
+This page is the only part of the university network that the Internet is
+allowed to reach. It lives in the DMZ, behind the ASA-EDGE firewall, and
+is published to the Internet on HTTP only.
+<br><br>
+
+<table border="1" cellpadding="6" cellspacing="0" width="100%">
+<tr bgcolor="#0D47A1">
+  <td><font color="#FFFFFF"><b>Zone</b></font></td>
+  <td><font color="#FFFFFF"><b>Security level</b></font></td>
+  <td><font color="#FFFFFF"><b>Can reach this page?</b></font></td>
+</tr>
+<tr bgcolor="#FFFFFF">
+  <td>Campus (inside)</td><td>100</td><td>Yes - by its real address 172.16.100.10</td>
+</tr>
+<tr bgcolor="#EAEEF3">
+  <td>Internet (outside)</td><td>0</td><td>Yes - HTTP only, via static NAT 203.0.113.10</td>
+</tr>
+<tr bgcolor="#FFFFFF">
+  <td>This server (dmz)</td><td>50</td><td>Cannot open any connection into the campus</td>
+</tr>
+</table>
+
+<br>
+<font size="4" color="#0D47A1"><b>Admissions and Contact</b></font>
+<br><br>
+Admissions office: admissions@university.edu<br>
+General enquiries: info@university.edu
+
+<hr>
+<center>
+<font size="2" color="#666666">University Campus Network Project &nbsp;|&nbsp; Edge firewall and DMZ extension</font>
+</center>
+
+</body>
+</html>
