@@ -52,6 +52,17 @@ access switches.
 | Rate limit 10 pps | A real PC sends 4 DHCP packets per lease; 10 per second never hurts a user but stops a flood |
 | Violation mode stays `restrict` | Extra MACs are dropped and counted while the legitimate device keeps working |
 
+### Packet Tracer 9.0.1 limitation: DAI is accepted but not enforced
+
+Found during the SW-LAB pilot (9 Nov 2026):
+
+- The 2960 accepts every `ip arp inspection` command. `show ip arp inspection` reports VLAN 70 as **Enabled / Active**.
+- It never inspects anything. SPOOF-PC (192.168.70.5, no binding) cleared its ARP cache, ARPed for PC-LAB1 and got a reply. Every DAI counter stayed at **0**, including *Forwarded*, even for the 8 legitimate PCs' ARP.
+- Adding `ip arp inspection validate src-mac dst-mac ip` changed nothing.
+- IP Source Guard (`ip verify source`), DAI's companion feature, is rejected with `% Invalid input`.
+
+**Decision:** DAI stays in all seven configs, because it is the correct design and works on real 2960s. For the demo, anti-spoofing is explained rather than shown live. DHCP snooping, the rate limit and port security *are* enforced by Packet Tracer and are demonstrated live.
+
 ---
 
 ## 2. New devices: the ATTACK LAB corner
@@ -129,9 +140,9 @@ attacks that must fail.
 | L2 | Binding table | SW-LAB | `show ip dhcp snooping binding` | One line per lab PC (and FLOOD-1): IP, MAC, VLAN 70, port | |
 | L3 | No collateral damage | PC-LAB1 | `ping www.university.local` | Replies | |
 | L4 | **ATTACK** rogue DHCP | PC-LAB2 | IP Configuration: Static, then DHCP - three times | Always `192.168.70.x` with gateway **192.168.70.1**, never `.100-.149` / gateway `.250` | |
-| L5 | **ATTACK** ARP spoofing | SPOOF-PC | `ping 192.168.70.11` | Fails - its ARP is dropped | |
-| L6 | DAI counters | SW-LAB | `show ip arp inspection statistics vlan 70` | Dropped count above 0 | |
-| L7 | Victims unaffected | PC-LAB1 | `arp -a`, then `ping 192.168.70.1` | No entry for 192.168.70.5 (SPOOF-PC never got into any ARP cache); gateway ping works | |
+| L5 | DAI configured | SW-LAB | `show ip arp inspection` | VLAN 70 Enabled / Active | |
+| L6 | **ATTACK** ARP spoofing | SPOOF-PC | `arp -d`, `ping 192.168.70.12` | On real hardware: fails, Dropped above 0. **In PT 9.0.1: succeeds, counters stay 0** (see the limitation note in section 1) | |
+| L7 | Victims unaffected | PC-LAB1 | `ping 192.168.70.1` | Gateway ping works | |
 | L8 | **ATTACK** MAC flooding | FLOOD-1, -2, -3 | `ipconfig` on each | Only one has a 192.168.70.x address; the others get none | |
 | L9 | Port security caught it | SW-LAB | `show port-security interface FastEthernet0/11` | Max 1, Security Violation Count above 0, port still Secure-up | |
 | L10 | MAC table did not grow | SW-LAB | `show mac address-table interface FastEthernet0/11` | Exactly one MAC | |
@@ -164,13 +175,15 @@ Run this before the demo if you want a "before and after":
    > PC-LAB2 still got gateway 192.168.70.1 from the real router, because DHCP
    > snooping only trusts the uplink.
    Show `show ip dhcp snooping binding`.
-2. **ARP spoofing.** SPOOF-PC: `ping 192.168.70.11` fails. SW-LAB:
-   `show ip arp inspection statistics vlan 70`.
-   > **SAY:** This PC gave itself an address nobody leased it, the way an
-   > attacker forges ARP replies. DAI checks every ARP against the DHCP
-   > bindings; there is no binding for 192.168.70.5 on Fa0/10, so its ARP
-   > is dropped before any victim sees it. Forging the gateway's own
-   > address would be dropped for exactly the same reason.
+2. **ARP spoofing (explained, not run).** On SW-LAB, show
+   `show ip dhcp snooping binding` and `show ip arp inspection`.
+   > **SAY:** SPOOF-PC gave itself 192.168.70.5, an address nobody leased
+   > it, the way an attacker forges ARP replies. DAI is enabled on VLAN 70
+   > and checks every ARP against this binding table. There is no binding
+   > for .5 on Fa0/10, so on a real switch its ARP is dropped. Packet
+   > Tracer accepts the DAI configuration but does not simulate the
+   > inspection itself, and it has no IP Source Guard either, so this
+   > one is shown as configuration.
 3. **MAC flooding.** `ipconfig` on FLOOD-1, -2, -3, then
    `show port-security interface FastEthernet0/11` and
    `show mac address-table interface FastEthernet0/11`.
@@ -204,5 +217,6 @@ Run this before the demo if you want a "before and after":
 | PCs get no address at all (169.254.x.x) | Option 82 still on, or Fa0/24 not trusted | `show ip dhcp snooping` - check "Insertion of option 82 is disabled" and Fa0/24 trusted |
 | `ip arp inspection` is rejected with `% Invalid input` | This PT build's 2960 lacks DAI | Keep DHCP snooping and port security; tell the examiner DAI needs a switch that supports it. Note it in the results |
 | A PC got 192.168.70.10x / gateway .250 | It got a rogue lease while snooping was off | Turn snooping on, renew that PC |
+| SPOOF-PC can still ping, DAI counters all 0 | Packet Tracer 9.0.1 does not enforce DAI (section 1) | Expected in PT. Explain it in the demo; do not try to "fix" it |
 | PT says the IP is already in use when setting SPOOF-PC to `.1` | Packet Tracer blocks duplicate IPs | Use `192.168.70.5` as in section 2 - DAI drops it for the same reason |
 | FLOOD-1 also has no address | Another FLOOD PC sent the first frame, so its MAC became the sticky one | Expected - whichever PC spoke first owns the port |
