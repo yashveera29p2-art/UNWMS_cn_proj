@@ -182,7 +182,7 @@ interface range FastEthernet0/1-8
 ! They get exactly the same protection as a student port, so the attacks
 ! are contained by the defences rather than by the ports being shut.
 !   Fa0/9   ROGUE-DHCP  - fake DHCP server        -> stopped by snooping
-!   Fa0/10  SPOOF-PC    - claims to be 192.168.70.1 -> stopped by DAI
+!   Fa0/10  SPOOF-PC    - self-assigned 192.168.70.5 (never leased) -> stopped by DAI
 !   Fa0/11  FLOOD-HUB   - hub with 3 PCs (MAC flood) -> stopped by port security
 ! BLOCK 5 parks Fa0/9-23 first; this block re-opens Fa0/9-11 on purpose.
 !------------------------------------------------------------------------

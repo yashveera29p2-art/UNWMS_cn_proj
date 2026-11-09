@@ -25,7 +25,7 @@ access switches.
    SW-LAB  -------------------------------------------------------------
       |  Fa0/1-8  untrusted   PC-LAB1..8     DHCP leases -> binding table
       |  Fa0/9    untrusted   ROGUE-DHCP     its OFFERs are dropped
-      |  Fa0/10   untrusted   SPOOF-PC       "I am .1" ARP is dropped
+      |  Fa0/10   untrusted   SPOOF-PC       ARP for an unleased IP dropped
       |  Fa0/11   untrusted   FLOOD-HUB -- FLOOD-1, FLOOD-2, FLOOD-3
       |                                     only 1 MAC allowed on the port
 ```
@@ -62,7 +62,7 @@ Six devices, placed beside SW-LAB and boxed with a rectangle labelled
 | Device | PT model | Connects to | Cable | Settings |
 |---|---|---|---|---|
 | ROGUE-DHCP | Server-PT | SW-LAB **Fa0/9** | Straight-Through | Static `192.168.70.250` /24, gateway `192.168.70.250`. Services > DHCP **On**: Default Gateway `192.168.70.250`, DNS `192.168.70.250`, Start IP `192.168.70.100`, Subnet `255.255.255.0`, Max Users `50`, **Save**. All other services Off |
-| SPOOF-PC | PC-PT | SW-LAB **Fa0/10** | Straight-Through | Static `192.168.70.1` /24 - deliberately the gateway's address. No gateway |
+| SPOOF-PC | PC-PT | SW-LAB **Fa0/10** | Straight-Through | Static `192.168.70.5` /24, no gateway. `.5` sits in R1's DHCP-excluded range, so no lease and no binding can ever exist for it - a self-assigned, spoofed identity. (Packet Tracer refuses `192.168.70.1` because R1-CORE already owns it.) |
 | FLOOD-HUB | Hub-PT (Network Devices > Hubs) | SW-LAB **Fa0/11** from hub **Port 0** | **Cross-Over** | none |
 | FLOOD-1 | PC-PT | FLOOD-HUB Port 1 | Straight-Through | DHCP |
 | FLOOD-2 | PC-PT | FLOOD-HUB Port 2 | Straight-Through | DHCP |
@@ -131,7 +131,7 @@ attacks that must fail.
 | L4 | **ATTACK** rogue DHCP | PC-LAB2 | IP Configuration: Static, then DHCP - three times | Always `192.168.70.x` with gateway **192.168.70.1**, never `.100-.149` / gateway `.250` | |
 | L5 | **ATTACK** ARP spoofing | SPOOF-PC | `ping 192.168.70.11` | Fails - its ARP is dropped | |
 | L6 | DAI counters | SW-LAB | `show ip arp inspection statistics vlan 70` | Dropped count above 0 | |
-| L7 | Victims unaffected | PC-LAB1 | `arp -a`, then `ping 192.168.70.1` | 192.168.70.1 maps to R1-CORE's MAC, not SPOOF-PC's; ping works | |
+| L7 | Victims unaffected | PC-LAB1 | `arp -a`, then `ping 192.168.70.1` | No entry for 192.168.70.5 (SPOOF-PC never got into any ARP cache); gateway ping works | |
 | L8 | **ATTACK** MAC flooding | FLOOD-1, -2, -3 | `ipconfig` on each | Only one has a 192.168.70.x address; the others get none | |
 | L9 | Port security caught it | SW-LAB | `show port-security interface FastEthernet0/11` | Max 1, Security Violation Count above 0, port still Secure-up | |
 | L10 | MAC table did not grow | SW-LAB | `show mac address-table interface FastEthernet0/11` | Exactly one MAC | |
@@ -161,13 +161,16 @@ Run this before the demo if you want a "before and after":
 
 1. **Rogue DHCP.** Point at ROGUE-DHCP. Renew PC-LAB2.
    > **SAY:** That server is offering addresses with itself as the gateway.
-   > PC-LAB2 still got 192.168.70.1 from the real router, because DHCP
+   > PC-LAB2 still got gateway 192.168.70.1 from the real router, because DHCP
    > snooping only trusts the uplink.
    Show `show ip dhcp snooping binding`.
 2. **ARP spoofing.** SPOOF-PC: `ping 192.168.70.11` fails. SW-LAB:
    `show ip arp inspection statistics vlan 70`.
-   > **SAY:** This PC claims to be the gateway. DAI checks every ARP against
-   > the bindings; nobody leased it 192.168.70.1, so its ARP is dropped.
+   > **SAY:** This PC gave itself an address nobody leased it, the way an
+   > attacker forges ARP replies. DAI checks every ARP against the DHCP
+   > bindings; there is no binding for 192.168.70.5 on Fa0/10, so its ARP
+   > is dropped before any victim sees it. Forging the gateway's own
+   > address would be dropped for exactly the same reason.
 3. **MAC flooding.** `ipconfig` on FLOOD-1, -2, -3, then
    `show port-security interface FastEthernet0/11` and
    `show mac address-table interface FastEthernet0/11`.
@@ -201,4 +204,5 @@ Run this before the demo if you want a "before and after":
 | PCs get no address at all (169.254.x.x) | Option 82 still on, or Fa0/24 not trusted | `show ip dhcp snooping` - check "Insertion of option 82 is disabled" and Fa0/24 trusted |
 | `ip arp inspection` is rejected with `% Invalid input` | This PT build's 2960 lacks DAI | Keep DHCP snooping and port security; tell the examiner DAI needs a switch that supports it. Note it in the results |
 | A PC got 192.168.70.10x / gateway .250 | It got a rogue lease while snooping was off | Turn snooping on, renew that PC |
+| PT says the IP is already in use when setting SPOOF-PC to `.1` | Packet Tracer blocks duplicate IPs | Use `192.168.70.5` as in section 2 - DAI drops it for the same reason |
 | FLOOD-1 also has no address | Another FLOOD PC sent the first frame, so its MAC became the sticky one | Expected - whichever PC spoke first owns the port |
