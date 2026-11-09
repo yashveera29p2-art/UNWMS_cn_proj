@@ -212,24 +212,39 @@ Tests marked **FAIL** are meant to fail: that is the firewall working.
 
 | # | Test | Run on | Command | Expected | Pass/Fail |
 |---|------|--------|---------|----------|-----------|
-| F1 | Default route | R1-CORE | `show ip route` | `S* 0.0.0.0/0 via 172.16.0.2` | |
-| F2 | Zones | ASA-EDGE | `show nameif` | outside 0, inside 100, dmz 50 | |
-| F3 | Campus to Internet (PAT) | PC-CSE1 | `ping 198.51.100.20` | Replies | |
-| F4 | Translation table | ASA-EDGE | `show xlate` | PAT entry, 192.168.20.x to 203.0.113.2 | |
-| F5 | Campus browses Internet | PC-CSE1 browser | `http://www.example.com` | example.com page | |
-| F6 | Internet browses public site | EXT-PC browser | `http://www.university.edu` | University Public Website | |
-| F7 | Outside ACL counter | ASA-EDGE | `show access-list` | OUTSIDE-IN line shows hitcnt greater than 0 | |
-| F8 | Internet pings public site | EXT-PC | `ping 203.0.113.10` | **FAIL** - timed out (only HTTP is published) | |
-| F9 | Internet reaches campus | EXT-PC | `ping 192.168.20.11` | **FAIL** - unreachable (private address, no route) | |
-| F10 | Internet reaches DMZ directly | EXT-PC | `ping 172.16.100.10` | **FAIL** - unreachable | |
-| F11 | DMZ attacks campus | DMZ-WEB | `ping 192.168.20.11` | **FAIL** - timed out (level 50 to level 100) | |
-| F12 | DMZ reaches Internet | DMZ-WEB | `ping 198.51.100.20` | Replies | |
-| F13 | Campus reaches DMZ (split DNS) | PC-LAB1 browser | `http://www.university.edu` | Public website, via 172.16.100.10 | |
-| F14 | Student labs still contained | PC-LAB1 | `ping 192.168.10.11` | **FAIL** - ACL 110 unchanged | |
-| F15 | Firewall SSH allowed | PC-ADM1 | `ssh -l netadmin 172.16.0.2` | Password prompt, then `ASA-EDGE>` | |
-| F16 | Firewall SSH refused | PC-CSE1 | `ssh -l netadmin 172.16.0.2` | Refused or timed out | |
-| F17 | Live translations | ASA-EDGE | `show xlate` (right after F5) | A TCP PAT entry for the campus PC, plus the static DMZ-WEB entry | |
-| F18 | DMZ port security | SW-DMZ | `show port-security` | Fa0/1 secured, max 1 | |
+| F1 | Default route | R1-CORE | `show ip route` | `S* 0.0.0.0/0 via 172.16.0.2` | PASS - tracert hop 2 is 172.16.0.2 |
+| F2 | Zones | ASA-EDGE | `show nameif` | outside 0, inside 100, dmz 50 | PASS |
+| F3 | Campus to Internet (PAT) | PC-CSE1 | `ping 198.51.100.20` | Replies | PASS - 4/4, TTL 125 |
+| F4 | Translation table | ASA-EDGE | `show xlate` | PAT entry, 192.168.20.x to 203.0.113.2 | PASS - ICMP PAT 192.168.20.16 to 203.0.113.2 |
+| F5 | Campus browses Internet | PC-CSE1 browser | `http://www.example.com` | example.com page | PASS |
+| F6 | Internet browses public site | EXT-PC browser | `http://www.university.edu` | University Public Website | PASS |
+| F7 | Outside ACL counter | ASA-EDGE | `show access-list` | OUTSIDE-IN line shows hitcnt greater than 0 | PASS - hitcnt=2 |
+| F8 | Internet pings public site | EXT-PC | `ping 203.0.113.10` | **FAIL** - timed out (only HTTP is published) | PASS (timed out) |
+| F9 | Internet reaches campus | EXT-PC | `ping 192.168.20.11` | **FAIL** - unreachable (private address, no route) | PASS (unreachable) |
+| F10 | Internet reaches DMZ directly | EXT-PC | `ping 172.16.100.10` | **FAIL** - unreachable | PASS (unreachable) |
+| F11 | DMZ attacks campus | DMZ-WEB | `ping 192.168.20.11` | **FAIL** - timed out (level 50 to level 100) | PASS (timed out) |
+| F12 | DMZ reaches Internet | DMZ-WEB | `ping 198.51.100.20` | Replies | PASS - TTL 126 |
+| F13 | Campus reaches DMZ (split DNS) | PC-LAB1 browser | `http://www.university.edu` | Public website, via 172.16.100.10 | PASS |
+| F14 | Student labs still contained | PC-LAB1 | `ping 192.168.10.11` | **FAIL** - ACL 110 unchanged | PASS (unreachable) |
+| F15 | Firewall SSH allowed | PC-ADM1 | `ssh -l netadmin 172.16.0.2` | Password prompt, then `ASA-EDGE>` | PASS |
+| F16 | Firewall SSH refused | PC-CSE1 | `ssh -l netadmin 172.16.0.2` | Refused or timed out | PASS (refused) |
+| F17 | Live translations | ASA-EDGE | `show xlate` (right after F5) | A TCP PAT entry for the campus PC, plus the static DMZ-WEB entry | PASS - TCP PAT 192.168.20.15 to 203.0.113.2 |
+| F18 | DMZ port security | SW-DMZ | `show port-security` | Fa0/1 secured, max 1 | PASS - Fa0/1 max 1, 0 violations |
+
+**Recorded on 9 November 2026, Packet Tracer 9.0.1: 18 of 18 passed.** F8-F11
+and F14 are the five designed failures and all failed as intended.
+
+Known Packet Tracer limitations seen during testing (not faults):
+
+- A ping started *by the ASA itself* to the Internet times out, while the same
+  ping from any campus PC through the ASA succeeds (F3). PT's ASA drops the
+  echo-reply addressed to its own outside interface.
+- tracert from campus shows `* * *` at hop 3 (ISP-RTR): its ICMP
+  time-exceeded is unsolicited inbound traffic and the outside ACL drops it.
+  The destination still answers at hop 4.
+- The first ping across a new path loses 1-2 packets while ARP and the NAT
+  entry are created.
+- ACL hit counters restart from 0 when the .pkt is reopened.
 
 ### Seeing NAT in Simulation mode
 
