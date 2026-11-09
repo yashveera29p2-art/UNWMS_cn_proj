@@ -10,7 +10,8 @@
 !
 ! PORT ROLE MAP
 !   Fa0/1 - Fa0/8   ACCESS VLAN 70  -> 8 student PCs
-!   Fa0/9 - Fa0/23  UNUSED, VLAN 999 parking + shutdown
+!   Fa0/9 - Fa0/11  ATTACK LAB demo ports, VLAN 70, protected (BLOCK 5c)
+!   Fa0/12 - Fa0/23 UNUSED, VLAN 999 parking + shutdown
 !   Fa0/24            TRUNK  -> SW-DIST Fa0/7
 !   Gi0/1 - Gi0/2     UNUSED, VLAN 999 parking + shutdown
 !
@@ -135,6 +136,72 @@ interface range GigabitEthernet0/1-2
  exit
 !
 ! VERIFY : do show interfaces status
+
+!------------------------------------------------------------------------
+! BLOCK 5b - DHCP SNOOPING, DYNAMIC ARP INSPECTION, DHCP RATE LIMIT
+! (Extension 2 - see docs/l2-security.md)
+! DHCP snooping : only the uplink Fa0/24, towards the real DHCP server
+!                 R1-CORE, may send DHCP OFFER/ACK. An offer arriving on a
+!                 user port - a rogue DHCP server - is dropped. The switch
+!                 records IP <-> MAC <-> port for every lease it sees.
+! Option 82     : switched off. R1-CORE is the DHCP server itself, not a
+!                 relay, and IOS discards requests that carry option 82
+!                 with giaddr 0 - that would break DHCP for the whole VLAN.
+! DAI           : every ARP from a user port is checked against that
+!                 binding table. An ARP claiming an address the port was
+!                 never leased ("I am the gateway") is dropped. The trusted
+!                 uplink carries the router's own ARP.
+! Rate limit    : max 10 DHCP packets per second per user port - stops a
+!                 DHCP-starvation flood from emptying the pool.
+! AFTER PASTING : renew every PC on this switch (Desktop -> IP
+!                 Configuration -> Static -> DHCP). A lease from before
+!                 snooping has no binding, so DAI drops that PC's ARP
+!                 until it renews.
+!------------------------------------------------------------------------
+ip dhcp snooping
+ip dhcp snooping vlan 70
+no ip dhcp snooping information option
+ip arp inspection vlan 70
+!
+interface FastEthernet0/24
+ ip dhcp snooping trust
+ ip arp inspection trust
+ exit
+!
+interface range FastEthernet0/1-8
+ ip dhcp snooping limit rate 10
+ exit
+!
+! VERIFY : do show ip dhcp snooping
+! VERIFY : do show ip dhcp snooping binding   (one line per renewed PC)
+! VERIFY : do show ip arp inspection
+
+!------------------------------------------------------------------------
+! BLOCK 5c - ATTACK DEMONSTRATION PORTS (SW-LAB only)
+! Three spare ports are re-enabled for the permanent "ATTACK LAB" corner.
+! They get exactly the same protection as a student port, so the attacks
+! are contained by the defences rather than by the ports being shut.
+!   Fa0/9   ROGUE-DHCP  - fake DHCP server        -> stopped by snooping
+!   Fa0/10  SPOOF-PC    - claims to be 192.168.70.1 -> stopped by DAI
+!   Fa0/11  FLOOD-HUB   - hub with 3 PCs (MAC flood) -> stopped by port security
+! BLOCK 5 parks Fa0/9-23 first; this block re-opens Fa0/9-11 on purpose.
+!------------------------------------------------------------------------
+interface range FastEthernet0/9-11
+ description ### ATTACK LAB DEMO PORT - VLAN 70, FULLY PROTECTED ###
+ switchport mode access
+ switchport access vlan 70
+ switchport nonegotiate
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+ switchport port-security
+ switchport port-security maximum 1
+ switchport port-security mac-address sticky
+ switchport port-security violation restrict
+ ip dhcp snooping limit rate 10
+ no shutdown
+ exit
+!
+! VERIFY : do show port-security
 
 !------------------------------------------------------------------------
 ! BLOCK 6 - MANAGEMENT SVI, SSH, CONSOLE AND VTY

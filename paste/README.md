@@ -1,8 +1,8 @@
 # paste/ - Ready-to-Paste Configuration Chunks
 
-Thirty-seven files. Each one is a single copy-paste operation into one
+Forty-four files. Each one is a single copy-paste operation into one
 device's CLI, in numbered order. Files 01-31 build the campus; 32-37 add
-the edge firewall and DMZ.
+the edge firewall and DMZ; 38-44 add Layer-2 security.
 
 ## Why these exist
 
@@ -68,6 +68,23 @@ These add the Internet edge. Full walkthrough with cabling and tests:
 | 35 | `35_SW-DMZ.txt` | SW-DMZ | Whole switch in one paste. No RSA step - this switch has no SSH |
 | 36 | `36_ISP-RTR.txt` | ISP-RTR | Simulated ISP |
 | 37 | `37_ISP-SW.txt` | ISP-SW | Hostname only |
+
+### Extension 2 - DHCP snooping, DAI, MAC-flooding protection (files 38-44)
+
+Walkthrough, attack corner and tests: `../docs/l2-security.md`. Each file
+starts at `configure terminal`: log in with `Cons@2025`, then `enable` and
+the switch's own password, by hand. **Renew every PC on the switch
+afterwards** (Static, then DHCP) or DAI will drop their ARP.
+
+| # | File | Device |
+|---|------|--------|
+| 38 | `38_SW-LAB_l2-security.txt` | SW-LAB - pilot first; also opens attack ports Fa0/9-11 |
+| 39 | `39_SW-ADMIN_l2-security.txt` | SW-ADMIN |
+| 40 | `40_SW-CSE_l2-security.txt` | SW-CSE |
+| 41 | `41_SW-ECE_l2-security.txt` | SW-ECE |
+| 42 | `42_SW-MECH_l2-security.txt` | SW-MECH |
+| 43 | `43_SW-LIB_l2-security.txt` | SW-LIB |
+| 44 | `44_SW-FAC_l2-security.txt` | SW-FAC |
 
 Every `part2` on a switch, and `part3` on the router, ends on the line
 `crypto key generate rsa`. That is deliberate. Packet Tracer will print:

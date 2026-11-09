@@ -11,6 +11,11 @@ outside), PAT for the campus, a public web server in a DMZ published by
 static NAT, and an outside ACL that admits HTTP only. See
 [`docs/edge-firewall-dmz.md`](docs/edge-firewall-dmz.md).
 
+**Extension 2 - Layer-2 security.** DHCP snooping, Dynamic ARP Inspection
+and a DHCP rate limit on the seven user access switches, plus a contained
+"attack lab" (rogue DHCP server, ARP spoofer, MAC-flooding hub) that shows
+each defence working. See [`docs/l2-security.md`](docs/l2-security.md).
+
 Everything needed to rebuild this network **by hand** is in this
 repository, so the project survives even if the `.pkt` file will not open
 on another machine.
@@ -261,6 +266,7 @@ git pull
 | [`docs/troubleshooting.md`](docs/troubleshooting.md) | Something is broken |
 | [`docs/portability-notes.md`](docs/portability-notes.md) | Moving between machines, PT limits |
 | [`docs/edge-firewall-dmz.md`](docs/edge-firewall-dmz.md) | Building, testing and demonstrating the firewall/DMZ extension |
+| [`docs/l2-security.md`](docs/l2-security.md) | Building, testing and demonstrating DHCP snooping, DAI and MAC-flooding protection |
 
 ---
 

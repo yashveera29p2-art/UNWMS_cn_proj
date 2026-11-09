@@ -137,6 +137,45 @@ interface range GigabitEthernet0/1-2
 ! VERIFY : do show interfaces status
 
 !------------------------------------------------------------------------
+! BLOCK 5b - DHCP SNOOPING, DYNAMIC ARP INSPECTION, DHCP RATE LIMIT
+! (Extension 2 - see docs/l2-security.md)
+! DHCP snooping : only the uplink Fa0/24, towards the real DHCP server
+!                 R1-CORE, may send DHCP OFFER/ACK. An offer arriving on a
+!                 user port - a rogue DHCP server - is dropped. The switch
+!                 records IP <-> MAC <-> port for every lease it sees.
+! Option 82     : switched off. R1-CORE is the DHCP server itself, not a
+!                 relay, and IOS discards requests that carry option 82
+!                 with giaddr 0 - that would break DHCP for the whole VLAN.
+! DAI           : every ARP from a user port is checked against that
+!                 binding table. An ARP claiming an address the port was
+!                 never leased ("I am the gateway") is dropped. The trusted
+!                 uplink carries the router's own ARP.
+! Rate limit    : max 10 DHCP packets per second per user port - stops a
+!                 DHCP-starvation flood from emptying the pool.
+! AFTER PASTING : renew every PC on this switch (Desktop -> IP
+!                 Configuration -> Static -> DHCP). A lease from before
+!                 snooping has no binding, so DAI drops that PC's ARP
+!                 until it renews.
+!------------------------------------------------------------------------
+ip dhcp snooping
+ip dhcp snooping vlan 40
+no ip dhcp snooping information option
+ip arp inspection vlan 40
+!
+interface FastEthernet0/24
+ ip dhcp snooping trust
+ ip arp inspection trust
+ exit
+!
+interface range FastEthernet0/1-4
+ ip dhcp snooping limit rate 10
+ exit
+!
+! VERIFY : do show ip dhcp snooping
+! VERIFY : do show ip dhcp snooping binding   (one line per renewed PC)
+! VERIFY : do show ip arp inspection
+
+!------------------------------------------------------------------------
 ! BLOCK 6 - MANAGEMENT SVI, SSH, CONSOLE AND VTY
 ! NOTE: 'crypto key generate rsa' is INTERACTIVE. Type 1024 at the
 !       "How many bits in the modulus [512]:" prompt, then continue.

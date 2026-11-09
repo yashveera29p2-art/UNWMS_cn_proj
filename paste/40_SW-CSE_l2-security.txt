@@ -1,0 +1,14 @@
+configure terminal
+ip dhcp snooping
+ip dhcp snooping vlan 20
+no ip dhcp snooping information option
+ip arp inspection vlan 20
+interface FastEthernet0/24
+ ip dhcp snooping trust
+ ip arp inspection trust
+ exit
+interface range FastEthernet0/1-6
+ ip dhcp snooping limit rate 10
+ exit
+end
+write memory

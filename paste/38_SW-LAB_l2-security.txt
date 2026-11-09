@@ -1,0 +1,28 @@
+configure terminal
+ip dhcp snooping
+ip dhcp snooping vlan 70
+no ip dhcp snooping information option
+ip arp inspection vlan 70
+interface FastEthernet0/24
+ ip dhcp snooping trust
+ ip arp inspection trust
+ exit
+interface range FastEthernet0/1-8
+ ip dhcp snooping limit rate 10
+ exit
+interface range FastEthernet0/9-11
+ description ### ATTACK LAB DEMO PORT - VLAN 70, FULLY PROTECTED ###
+ switchport mode access
+ switchport access vlan 70
+ switchport nonegotiate
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+ switchport port-security
+ switchport port-security maximum 1
+ switchport port-security mac-address sticky
+ switchport port-security violation restrict
+ ip dhcp snooping limit rate 10
+ no shutdown
+ exit
+end
+write memory
