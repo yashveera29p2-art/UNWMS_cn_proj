@@ -133,14 +133,15 @@ Then **File > Save**.
 
 Ignore the first lost ping of any test (ARP). Tests marked **ATTACK** are
 attacks that must fail. Results recorded in Packet Tracer 9.0.1 on
-9 Nov 2026: **11 of 12 pass**; L6 is the documented PT limitation.
+9 Nov 2026: **12 of 13 pass**; L6 is the documented PT limitation.
 
 | # | Test | Run on | Command / action | Expected | Result |
 |---|---|---|---|---|---|
 | L1 | Snooping state | SW-LAB | `show ip dhcp snooping` | Enabled, VLAN 70, Fa0/24 trusted, rate limit 10 on user ports | PASS - VLAN 70, Fa0/24 trusted/unlimited, Fa0/1-11 untrusted at 10 pps |
 | L2 | Binding table | SW-LAB | `show ip dhcp snooping binding` | One line per lab PC (and FLOOD-1): IP, MAC, VLAN 70, port | PASS - 8 bindings, PC-LAB1-8 on Fa0/1-8 (.11-.18) |
 | L3 | No collateral damage | PC-LAB1 | `ping www.university.local` | Replies | PASS - 3/4 then 4/4 (first loss = ARP) |
-| L4 | **ATTACK** rogue DHCP | PC-LAB2 | IP Configuration: Static, then DHCP - three times | Always `192.168.70.x` with gateway **192.168.70.1**, never `.100-.149` / gateway `.250` | PASS - PC-LAB2 got .11, gateway .1, DNS 192.168.80.10 (rogue pool never used) |
+| L4 | **ATTACK** rogue DHCP | PC-LAB2 | IP Configuration: Static, then DHCP - three times | Always `192.168.70.x` with gateway **192.168.70.1**, never `.100-.149` / gateway `.250` | PASS - PC-LAB2 got .11, gateway .1, DNS 192.168.80.10, re-run with Fa0/9 **up** so snooping alone stopped it |
+| L4b | **ATTACK** rogue DHCP shut out | SW-LAB | `show interfaces status`, then `show interfaces FastEthernet0/9` | Fa0/9 **err-disabled** after the rogue answers renewals | PASS - Fa0/9 err-disabled, 956 broadcast packets received from ROGUE-DHCP; red link light in the topology |
 | L5 | DAI configured | SW-LAB | `show ip arp inspection` | VLAN 70 Enabled / Active | PASS - VLAN 70 Enabled / Active |
 | L6 | **ATTACK** ARP spoofing | SPOOF-PC | `arp -d`, `ping 192.168.70.12` | On real hardware: fails, Dropped above 0. **In PT 9.0.1: succeeds, counters stay 0** (see the limitation note in section 1) | PT LIMITATION - ping to .11, .13, .12 all replied; all DAI counters 0; `validate` changed nothing; `ip verify source` rejected |
 | L7 | Victims unaffected | PC-LAB1 | `ping 192.168.70.1` | Gateway ping works | PASS - lab PCs still routed via .1 (TTL 127 replies in L3 and L11) |
@@ -175,7 +176,12 @@ Run this before the demo if you want a "before and after":
    > **SAY:** That server is offering addresses with itself as the gateway.
    > PC-LAB2 still got gateway 192.168.70.1 from the real router, because DHCP
    > snooping only trusts the uplink.
-   Show `show ip dhcp snooping binding`.
+   Show `show ip dhcp snooping binding`, then `show interfaces status`:
+   Fa0/9 is **err-disabled** (the red light on the ROGUE-DHCP link).
+   > **SAY:** Two layers. Snooping throws away every offer the rogue
+   > sends. And because a rogue server answers every broadcast, it blew
+   > through the 10-packets-per-second DHCP limit, so the switch shut
+   > its port completely.
 2. **ARP spoofing (explained, not run).** On SW-LAB, show
    `show ip dhcp snooping binding` and `show ip arp inspection`.
    > **SAY:** SPOOF-PC gave itself 192.168.70.5, an address nobody leased
@@ -206,6 +212,7 @@ Run this before the demo if you want a "before and after":
 | Why disable option 82? | The router is the DHCP server, not a relay. IOS drops requests carrying option 82 with a zero relay address, which would stop every PC getting an address. |
 | What is MAC flooding and how is it stopped? | Filling the switch's MAC table with fake addresses so it floods all frames like a hub. Port security limits each port to one MAC, so the table cannot be filled from a user port. |
 | Difference between MAC flooding and DHCP starvation? | MAC flooding attacks the switch's MAC table; DHCP starvation attacks the router's address pool. Port security stops the first, the snooping rate limit (and port security) stops the second. |
+| Why did the rogue server's port go down? | The DHCP rate limit counts DHCP packets arriving on an untrusted port. A rogue server answers every client's broadcast, so it exceeds 10 per second and the switch err-disables the port. A normal PC sends about four per lease and never gets close. |
 | Why `restrict` and not `shutdown`? | `restrict` drops only the offending frames and counts them; the legitimate user on that port keeps working. `shutdown` would err-disable the whole port until an admin intervenes. |
 
 ---
@@ -217,6 +224,7 @@ Run this before the demo if you want a "before and after":
 | After the paste, lab PCs cannot ping anything | Old leases have no binding, so DAI drops their ARP | Renew each PC (Static, then DHCP) |
 | PCs get no address at all (169.254.x.x) | Option 82 still on, or Fa0/24 not trusted | `show ip dhcp snooping` - check "Insertion of option 82 is disabled" and Fa0/24 trusted |
 | `ip arp inspection` is rejected with `% Invalid input` | This PT build's 2960 lacks DAI | Keep DHCP snooping and port security; tell the examiner DAI needs a switch that supports it. Note it in the results |
+| Red light on the ROGUE-DHCP link; Fa0/9 `err-disabled` | The rogue's DHCP broadcasts exceeded `ip dhcp snooping limit rate 10` (no BPDUs, one MAC, so not BPDU guard or port security). The state survives save and reopen | Intended - leave it for the demo. To bring it back: `interface FastEthernet0/9`, `shutdown`, `no shutdown` |
 | A PC got 192.168.70.10x / gateway .250 | It got a rogue lease while snooping was off | Turn snooping on, renew that PC |
 | SPOOF-PC can still ping, DAI counters all 0 | Packet Tracer 9.0.1 does not enforce DAI (section 1) | Expected in PT. Explain it in the demo; do not try to "fix" it |
 | PT says the IP is already in use when setting SPOOF-PC to `.1` | Packet Tracer blocks duplicate IPs | Use `192.168.70.5` as in section 2 - DAI drops it for the same reason |

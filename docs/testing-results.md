@@ -609,9 +609,9 @@ section 3. Five of them (F8-F11, F14) are designed to fail.
 
 ---
 
-## Extension 2 tests (L1-L12)
+## Extension 2 tests (L1-L12, L4b)
 
 The Layer-2 security tests are in [`l2-security.md`](l2-security.md)
-section 4. Recorded 9 Nov 2026 in PT 9.0.1: 11 of 12 pass. L6 (ARP
+section 4. Recorded 9 Nov 2026 in PT 9.0.1: 12 of 13 pass (L1-L12 plus L4b). L6 (ARP
 spoofing) is a documented Packet Tracer limitation - DAI is accepted but
 not enforced.
