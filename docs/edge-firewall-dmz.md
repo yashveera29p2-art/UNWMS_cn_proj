@@ -205,6 +205,10 @@ git push
 
 Run in this order. Ignore the first `Request timed out` of any ping (ARP).
 Tests marked **FAIL** are meant to fail: that is the firewall working.
+> **Packet Tracer limits on the ASA.** Run every ASA `show` command at the
+> `ASA-EDGE#` prompt (after `enable`). PT 9.0.1 rejects a named
+> `show access-list OUTSIDE-IN` (use plain `show access-list`) and does not
+> implement `show conn` (use `show xlate`).
 
 | # | Test | Run on | Command | Expected | Pass/Fail |
 |---|------|--------|---------|----------|-----------|
@@ -214,7 +218,7 @@ Tests marked **FAIL** are meant to fail: that is the firewall working.
 | F4 | Translation table | ASA-EDGE | `show xlate` | PAT entry, 192.168.20.x to 203.0.113.2 | |
 | F5 | Campus browses Internet | PC-CSE1 browser | `http://www.example.com` | example.com page | |
 | F6 | Internet browses public site | EXT-PC browser | `http://www.university.edu` | University Public Website | |
-| F7 | Outside ACL counter | ASA-EDGE | `show access-list OUTSIDE-IN` | hitcnt greater than 0 | |
+| F7 | Outside ACL counter | ASA-EDGE | `show access-list` | OUTSIDE-IN line shows hitcnt greater than 0 | |
 | F8 | Internet pings public site | EXT-PC | `ping 203.0.113.10` | **FAIL** - timed out (only HTTP is published) | |
 | F9 | Internet reaches campus | EXT-PC | `ping 192.168.20.11` | **FAIL** - unreachable (private address, no route) | |
 | F10 | Internet reaches DMZ directly | EXT-PC | `ping 172.16.100.10` | **FAIL** - unreachable | |
@@ -224,7 +228,7 @@ Tests marked **FAIL** are meant to fail: that is the firewall working.
 | F14 | Student labs still contained | PC-LAB1 | `ping 192.168.10.11` | **FAIL** - ACL 110 unchanged | |
 | F15 | Firewall SSH allowed | PC-ADM1 | `ssh -l netadmin 172.16.0.2` | Password prompt, then `ASA-EDGE>` | |
 | F16 | Firewall SSH refused | PC-CSE1 | `ssh -l netadmin 172.16.0.2` | Refused or timed out | |
-| F17 | Live connections | ASA-EDGE | `show conn` | Sessions from F5/F6 listed | |
+| F17 | Live translations | ASA-EDGE | `show xlate` (right after F5) | A TCP PAT entry for the campus PC, plus the static DMZ-WEB entry | |
 | F18 | DMZ port security | SW-DMZ | `show port-security` | Fa0/1 secured, max 1 | |
 
 ### Seeing NAT in Simulation mode
@@ -267,7 +271,7 @@ Add this after Step 8 (ACLs) of the Demonstration Guide.
    > over the public web server. It is in the DMZ at level 50, and a lower
    > level can never start a connection to a higher one. The compromised
    > server cannot reach a single campus machine.
-6. ASA-EDGE: `show access-list OUTSIDE-IN`. Point at the hit count.
+6. ASA-EDGE: `show access-list`. Point at the OUTSIDE-IN hit count.
 
 ---
 
@@ -294,7 +298,7 @@ Add this after Step 8 (ACLs) of the Demonstration Guide.
 | R1 `ping 172.16.0.2` fails | Link 1 red? Swap cable type. On ASA `show nameif`: is Gi1/2 named inside? |
 | Campus ping to Internet times out, but ASA can ping 198.51.100.20 | `show nat` (CAMPUS-LAN object present?) and `show service-policy` (inspect icmp present?) |
 | `show xlate` empty | Traffic never reached the ASA: check R1's `S*` default route |
-| EXT-PC cannot load www.university.edu | Try `http://203.0.113.10`. If the IP works, fix the EXT-SRV DNS record. If not, `show access-list OUTSIDE-IN` and `show nat` (DMZ-WEB static) |
+| EXT-PC cannot load www.university.edu | Try `http://203.0.113.10`. If the IP works, fix the EXT-SRV DNS record. If not, `show access-list` and `show nat` (DMZ-WEB static) |
 | Campus PCs get 192.168.1.x addresses | The ASA's factory DHCP server is still on: `no dhcpd enable inside` |
 | DMZ-WEB unreachable from campus | DMZ-WEB gateway must be 172.16.100.1. SW-DMZ Gi0/1 and Fa0/1 in VLAN 100 |
 | SSH to ASA refused from Admin | `show ssh` should list 192.168.10.0 255.255.255.0 inside; regenerate the key with `crypto key generate rsa modulus 1024` |

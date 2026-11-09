@@ -147,7 +147,8 @@ configure terminal
 access-list OUTSIDE-IN extended permit tcp any host 172.16.100.10 eq www
 access-group OUTSIDE-IN in interface outside
 !
-! VERIFY : show access-list OUTSIDE-IN     (hitcnt rises per HTTP session)
+! VERIFY : show access-list     (OUTSIDE-IN hitcnt rises per HTTP session)
+!          PT's ASA rejects a named "show access-list OUTSIDE-IN".
 
 !------------------------------------------------------------------------
 ! BLOCK 6 - STATEFUL INSPECTION
@@ -205,7 +206,7 @@ write memory
 !   show route
 !   show nat
 !   show xlate
-!   show conn
+!   (show conn is not implemented in PT - use show xlate)
 !   show access-list
 !   show service-policy
 !
