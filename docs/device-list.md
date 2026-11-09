@@ -99,3 +99,22 @@ by hand on each server.
 | VLAN | Name | Where | Network |
 |------|------|-------|---------|
 | 100 | DMZ | SW-DMZ only, not on any campus trunk | 172.16.100.0/24 |
+
+---
+
+## 4. Extension 2 - Layer-2 security attack lab
+
+Six devices beside SW-LAB, boxed "ATTACK LAB - contained by Layer-2
+security". Full detail in [`l2-security.md`](l2-security.md).
+
+| Device | Model | Connects to | Role |
+|--------|-------|-------------|------|
+| ROGUE-DHCP | Server-PT | SW-LAB Fa0/9 | Rogue DHCP server (192.168.70.250, pool .100+, gateway .250) |
+| SPOOF-PC | PC-PT | SW-LAB Fa0/10 | Self-assigned 192.168.70.5, never leased - ARP-spoofing attacker |
+| FLOOD-HUB | Hub-PT | SW-LAB Fa0/11 | Puts many MACs behind one switch port |
+| FLOOD-1 | PC-PT | FLOOD-HUB Port 1 | MAC-flooding source (DHCP) |
+| FLOOD-2 | PC-PT | FLOOD-HUB Port 2 | MAC-flooding source (DHCP) |
+| FLOOD-3 | PC-PT | FLOOD-HUB Port 3 | MAC-flooding source (DHCP) |
+
+**Totals with both extensions** - 2 routers, 1 firewall, 11 switches,
+1 hub, 41 PCs, 6 servers = **62 devices**, **61 cables**.

@@ -606,3 +606,12 @@ doing what the configuration claims.
 The edge firewall and DMZ extension has its own eighteen tests, with a
 Pass/Fail column, in [`edge-firewall-dmz.md`](edge-firewall-dmz.md)
 section 3. Five of them (F8-F11, F14) are designed to fail.
+
+---
+
+## Extension 2 tests (L1-L12)
+
+The Layer-2 security tests are in [`l2-security.md`](l2-security.md)
+section 4. Recorded 9 Nov 2026 in PT 9.0.1: 11 of 12 pass. L6 (ARP
+spoofing) is a documented Packet Tracer limitation - DAI is accepted but
+not enforced.

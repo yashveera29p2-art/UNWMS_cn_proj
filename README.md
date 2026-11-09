@@ -188,6 +188,10 @@ the VTY lines with `access-class 10 in`.
 | Stateful inspection incl. `inspect icmp` | ASA-EDGE | only replies to campus-initiated traffic come back in |
 | SSH only from `192.168.10.0/24` on inside | ASA-EDGE | firewall managed from Admin only, never from dmz/outside |
 | No management IP, VTY disabled | SW-DMZ | a compromised DMZ server cannot reach the switch |
+| DHCP snooping, uplink Fa0/24 trusted | 7 user access switches | only R1-CORE can hand out addresses; a rogue DHCP server is ignored |
+| DHCP snooping rate limit 10 pps | all user ports | stops DHCP-starvation floods |
+| Dynamic ARP Inspection | 7 user access switches | ARP checked against the snooping bindings (configured; PT 9.0.1 does not enforce it) |
+| Port security as MAC-flooding defence | SW-LAB Fa0/11 attack port (and all access ports) | a hub of attackers gets one MAC through; the rest are dropped and counted |
 
 ---
 

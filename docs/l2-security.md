@@ -132,22 +132,23 @@ Then **File > Save**.
 ## 4. Tests
 
 Ignore the first lost ping of any test (ARP). Tests marked **ATTACK** are
-attacks that must fail.
+attacks that must fail. Results recorded in Packet Tracer 9.0.1 on
+9 Nov 2026: **11 of 12 pass**; L6 is the documented PT limitation.
 
 | # | Test | Run on | Command / action | Expected | Result |
 |---|---|---|---|---|---|
-| L1 | Snooping state | SW-LAB | `show ip dhcp snooping` | Enabled, VLAN 70, Fa0/24 trusted, rate limit 10 on user ports | |
-| L2 | Binding table | SW-LAB | `show ip dhcp snooping binding` | One line per lab PC (and FLOOD-1): IP, MAC, VLAN 70, port | |
-| L3 | No collateral damage | PC-LAB1 | `ping www.university.local` | Replies | |
-| L4 | **ATTACK** rogue DHCP | PC-LAB2 | IP Configuration: Static, then DHCP - three times | Always `192.168.70.x` with gateway **192.168.70.1**, never `.100-.149` / gateway `.250` | |
-| L5 | DAI configured | SW-LAB | `show ip arp inspection` | VLAN 70 Enabled / Active | |
-| L6 | **ATTACK** ARP spoofing | SPOOF-PC | `arp -d`, `ping 192.168.70.12` | On real hardware: fails, Dropped above 0. **In PT 9.0.1: succeeds, counters stay 0** (see the limitation note in section 1) | |
-| L7 | Victims unaffected | PC-LAB1 | `ping 192.168.70.1` | Gateway ping works | |
-| L8 | **ATTACK** MAC flooding | FLOOD-1, -2, -3 | `ipconfig` on each | Only one has a 192.168.70.x address; the others get none | |
-| L9 | Port security caught it | SW-LAB | `show port-security interface FastEthernet0/11` | Max 1, Security Violation Count above 0, port still Secure-up | |
-| L10 | MAC table did not grow | SW-LAB | `show mac address-table interface FastEthernet0/11` | Exactly one MAC | |
-| L11 | Rollout healthy | One PC per department | `ping www.university.local` | Replies from all seven departments | |
-| L12 | Firewall unaffected | PC-CSE1 browser | `http://www.example.com` | Page loads | |
+| L1 | Snooping state | SW-LAB | `show ip dhcp snooping` | Enabled, VLAN 70, Fa0/24 trusted, rate limit 10 on user ports | PASS - VLAN 70, Fa0/24 trusted/unlimited, Fa0/1-11 untrusted at 10 pps |
+| L2 | Binding table | SW-LAB | `show ip dhcp snooping binding` | One line per lab PC (and FLOOD-1): IP, MAC, VLAN 70, port | PASS - 8 bindings, PC-LAB1-8 on Fa0/1-8 (.11-.18) |
+| L3 | No collateral damage | PC-LAB1 | `ping www.university.local` | Replies | PASS - 3/4 then 4/4 (first loss = ARP) |
+| L4 | **ATTACK** rogue DHCP | PC-LAB2 | IP Configuration: Static, then DHCP - three times | Always `192.168.70.x` with gateway **192.168.70.1**, never `.100-.149` / gateway `.250` | PASS - PC-LAB2 got .11, gateway .1, DNS 192.168.80.10 (rogue pool never used) |
+| L5 | DAI configured | SW-LAB | `show ip arp inspection` | VLAN 70 Enabled / Active | PASS - VLAN 70 Enabled / Active |
+| L6 | **ATTACK** ARP spoofing | SPOOF-PC | `arp -d`, `ping 192.168.70.12` | On real hardware: fails, Dropped above 0. **In PT 9.0.1: succeeds, counters stay 0** (see the limitation note in section 1) | PT LIMITATION - ping to .11, .13, .12 all replied; all DAI counters 0; `validate` changed nothing; `ip verify source` rejected |
+| L7 | Victims unaffected | PC-LAB1 | `ping 192.168.70.1` | Gateway ping works | PASS - lab PCs still routed via .1 (TTL 127 replies in L3 and L11) |
+| L8 | **ATTACK** MAC flooding | FLOOD-1, -2, -3 | `ipconfig` on each | Only one has a 192.168.70.x address; the others get none | PASS - FLOOD-1 got 192.168.70.19; FLOOD-2/-3 stayed on 169.254.x.x |
+| L9 | Port security caught it | SW-LAB | `show port-security interface FastEthernet0/11` | Max 1, Security Violation Count above 0, port still Secure-up | PASS - Max 1, Total 1, Secure-up, Violation Count 21; Last Source = FLOOD-3's MAC |
+| L10 | MAC table did not grow | SW-LAB | `show mac address-table interface FastEthernet0/11` | Exactly one MAC | PASS - only 00d0.d346.0268 (FLOOD-1) |
+| L11 | Rollout healthy | One PC per department | `ping www.university.local` | Replies from all seven departments | PASS - ADMIN, CSE, ECE, MECH, LIB, FAC and LAB PCs all reply; SW-LIB shows 4 bindings |
+| L12 | Firewall unaffected | PC-CSE1 browser | `http://www.example.com` | Page loads | PASS - www.example.com loads via PAT 203.0.113.2 |
 
 ### Optional: show the attack succeeding first
 

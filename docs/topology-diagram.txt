@@ -149,3 +149,24 @@ LEGEND
   ACCESS links added : 5
   TOTAL cables       : 55
 =========================================================================
+
+=========================================================================
+ EXTENSION 2 - LAYER-2 SECURITY ATTACK LAB (beside SW-LAB)
+=========================================================================
+
+                       SW-DIST
+                         |  Fa0/24  TRUSTED (DHCP snooping + DAI)
+                     [ SW-LAB ]  VLAN 70
+                         |
+     +-------------+-----+---------+------------------+
+     | Fa0/1-8     | Fa0/9         | Fa0/10           | Fa0/11 (cross-over)
+  PC-LAB1..8   ROGUE-DHCP      SPOOF-PC          [ FLOOD-HUB ]
+  DHCP leases  .250 /24        .5 /24             P1    P2    P3
+  = bindings   offers          never leased       |     |     |
+               DROPPED         (DAI on real HW) FLOOD-1 FLOOD-2 FLOOD-3
+                                                 only 1 MAC allowed
+
+  Untrusted ports Fa0/1-11 : DHCP rate limit 10 pps
+  ACCESS links added       : 6
+  TOTAL devices / cables   : 62 / 61
+=========================================================================

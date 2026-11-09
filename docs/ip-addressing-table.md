@@ -179,3 +179,16 @@ New DNS records:
 | SRV-DNS (campus) | www.example.com | 198.51.100.20 | lets campus PCs browse the Internet site by name |
 | EXT-SRV (Internet) | www.university.edu | 203.0.113.10 | Internet users get the public NAT address |
 | EXT-SRV (Internet) | www.example.com | 198.51.100.20 | |
+
+---
+
+## 8. Extension 2 - attack lab (VLAN 70)
+
+Full detail in [`l2-security.md`](l2-security.md).
+
+| Device | Address | How | Notes |
+|--------|---------|-----|-------|
+| ROGUE-DHCP | 192.168.70.250/24, gw .250 | static | Its own DHCP pool (.100+, gateway/DNS .250) never reaches a victim: snooping drops its OFFERs on Fa0/9 |
+| SPOOF-PC | 192.168.70.5/24, no gw | static | Inside R1's excluded range .1-.10, so it can never have a DHCP binding |
+| FLOOD-1 | 192.168.70.x | DHCP | Only the first MAC on Fa0/11 is allowed, so this PC gets the lease |
+| FLOOD-2, FLOOD-3 | 169.254.x.x | DHCP fails | Their frames are dropped by port security |

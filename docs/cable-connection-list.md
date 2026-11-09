@@ -118,7 +118,7 @@ bolt) category:
 | SW-MECH | Fa0/5 – Fa0/23, Gi0/1, Gi0/2 | VLAN 999, `shutdown` |
 | SW-LIB | Fa0/5 – Fa0/23, Gi0/1, Gi0/2 | VLAN 999, `shutdown` |
 | SW-FAC | Fa0/5 – Fa0/23, Gi0/1, Gi0/2 | VLAN 999, `shutdown` |
-| SW-LAB | Fa0/9 – Fa0/23, Gi0/1, Gi0/2 | VLAN 999, `shutdown` |
+| SW-LAB | Fa0/12 – Fa0/23, Gi0/1, Gi0/2 (Fa0/9-11 used by the attack lab, Section D) | VLAN 999, `shutdown` |
 | SW-SRV | Fa0/4 – Fa0/23, Gi0/1, Gi0/2 | VLAN 999, `shutdown` |
 
 > **Order matters.** Attach the cables *before* pasting the switch
@@ -145,3 +145,18 @@ bolt) category:
 
 R1-CORE Gi0/1 is no longer an unused port. If cable 49 or 50 stays red
 after the ASA is configured, replace it with Copper Straight-Through.
+
+---
+
+## Section D - Layer-2 security attack lab (6 cables)
+
+| # | From | Port | | To | Port | Role | Cable |
+|---|------|------|-|----|------|------|-------|
+| 56 | ROGUE-DHCP | FastEthernet0 | → | SW-LAB | Fa0/9 | ACCESS VLAN 70, untrusted | Copper Straight-Through |
+| 57 | SPOOF-PC | FastEthernet0 | → | SW-LAB | Fa0/10 | ACCESS VLAN 70, untrusted | Copper Straight-Through |
+| 58 | FLOOD-HUB | Port 0 | → | SW-LAB | Fa0/11 | ACCESS VLAN 70, port security max 1 | Copper Cross-Over |
+| 59 | FLOOD-1 | FastEthernet0 | → | FLOOD-HUB | Port 1 | shared segment | Copper Straight-Through |
+| 60 | FLOOD-2 | FastEthernet0 | → | FLOOD-HUB | Port 2 | shared segment | Copper Straight-Through |
+| 61 | FLOOD-3 | FastEthernet0 | → | FLOOD-HUB | Port 3 | shared segment | Copper Straight-Through |
+
+Total: **61 cables**.
