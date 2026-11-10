@@ -271,6 +271,7 @@ git pull
 | [`docs/portability-notes.md`](docs/portability-notes.md) | Moving between machines, PT limits |
 | [`docs/edge-firewall-dmz.md`](docs/edge-firewall-dmz.md) | Building, testing and demonstrating the firewall/DMZ extension |
 | [`docs/l2-security.md`](docs/l2-security.md) | Building, testing and demonstrating DHCP snooping, DAI and MAC-flooding protection |
+| [`docs/Project-Presentation.pptx`](docs/Project-Presentation.pptx) | The presentation (13 slides), updated with both extensions and the test results |
 | [`docs/Project-Report.docx`](docs/Project-Report.docx) | The project report (6 pages): design, implementation, both extensions, testing |
 | [`docs/project-explanation.md`](docs/project-explanation.md) | The whole project explained for the team: concepts, every part, and packet walkthroughs |
 
